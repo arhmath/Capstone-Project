@@ -1,24 +1,53 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AppProvider } from './contexts/AppContext';
+import ProtectedRoute from './components/ProtectedRoute'; // Tetap di components
+
+// Import dari folder PAGES
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import PilihJenjang from './pages/PilihJenjang';
+import PreTest from './pages/Pretest';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AppProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Halaman yang diproteksi */}
+          <Route 
+            path="/pilih-jenjang" 
+            element={
+              <ProtectedRoute>
+                <PilihJenjang />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/pre-test/:jenjang" 
+            element={
+              <ProtectedRoute>
+                <PreTest />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/*" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </Router>
+    </AppProvider>
   );
 }
 

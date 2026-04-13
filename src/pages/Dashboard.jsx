@@ -8,60 +8,13 @@ import {
   LogOut, 
   Bell,
   Search,
-  ChevronRight,
   Star
 } from 'lucide-react';
 
-// Sub-Pages (Bisa dipisah ke file berbeda nanti)
-const QuestMap = () => {
-  const { user } = useApp();
-  
-  const quests = [
-    { id: 1, title: "Dasar Angka", status: "completed", xp: 100 },
-    { id: 2, title: "Operasi Campuran", status: "current", xp: 250 },
-    { id: 3, title: "Logika Pecahan", status: "locked", xp: 400 },
-    { id: 4, title: "Geometri Dasar", status: "locked", xp: 500 },
-  ];
-
-  return (
-    <div className="animate-in fade-in duration-500">
-      <div className="bg-mq-primary rounded-[2.5rem] p-8 text-white mb-8 relative overflow-hidden shadow-xl shadow-blue-200">
-        <div className="relative z-10">
-          <h2 className="text-3xl font-black mb-2">Lanjutkan Petualanganmu!</h2>
-          <p className="opacity-80 font-medium">Kamu sedang berada di modul {quests[1].title}</p>
-          <button className="mt-6 px-6 py-3 bg-white text-mq-primary rounded-xl font-black hover:bg-mq-peach transition-colors">
-            Main Sekarang
-          </button>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20"></div>
-      </div>
-
-      <h3 className="text-xl font-black text-slate-800 mb-6">Quest Map - Jenjang {user?.jenjang}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {quests.map((q) => (
-          <div key={q.id} className={`p-6 rounded-3xl border-2 flex items-center justify-between transition-all ${
-            q.status === 'completed' ? 'bg-green-50 border-green-100' : 
-            q.status === 'current' ? 'bg-white border-mq-primary shadow-lg' : 'bg-slate-50 border-slate-100 opacity-60'
-          }`}>
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${
-                q.status === 'completed' ? 'bg-green-500 text-white' : 
-                q.status === 'current' ? 'bg-mq-primary text-white' : 'bg-slate-200 text-slate-500'
-              }`}>
-                {q.id}
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800">{q.title}</h4>
-                <p className="text-xs font-bold text-mq-orange">{q.xp} XP</p>
-              </div>
-            </div>
-            {q.status !== 'locked' && <ChevronRight className="text-slate-400" />}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+// Import sub-pages
+import QuestMap from './QuestMap';
+import Leaderboard from './Leaderboard';
+import Achievement from './Achievement';
 
 const Dashboard = () => {
   const { user, logout } = useApp();
@@ -92,7 +45,33 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 mt-4">
+        {/* User Card di Sidebar */}
+        <div className="mx-4 mb-4 p-4 bg-mq-primary/5 rounded-2xl border border-mq-primary/10">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl overflow-hidden border-2 border-white shadow-md">
+              <img src={user?.foto} alt="User" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <p className="font-black text-slate-800 text-sm leading-tight">{user?.username || 'Petualang'}</p>
+              <p className="text-[10px] font-bold text-mq-primary uppercase tracking-wider">Lv.{user?.level || 1} · {user?.jenjang || 'SD'}</p>
+            </div>
+          </div>
+          {/* XP Bar */}
+          <div className="mt-3">
+            <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1">
+              <span>{user?.xp || 0} XP</span>
+              <span>{((user?.level || 1) * 1000)} XP</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-mq-primary rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(((user?.xp || 0) % 1000) / 10, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 mt-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-4">Menu Utama</p>
           <div className="space-y-2">
             {navLinks.map((link) => {
@@ -129,7 +108,7 @@ const Dashboard = () => {
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
         {/* TOPBAR */}
-        <header className="h-24 px-10 flex items-center justify-between sticky top-0 bg-[#FDFCFB]/80 backdrop-blur-md z-10">
+        <header className="h-24 px-10 flex items-center justify-between sticky top-0 bg-[#FDFCFB]/80 backdrop-blur-md z-10 border-b border-slate-100/50">
           <div className="relative w-72">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
@@ -150,7 +129,7 @@ const Dashboard = () => {
               <span className="absolute top-3 right-3 w-2 h-2 bg-mq-orange rounded-full border-2 border-white"></span>
             </button>
 
-            {/* Profile Section */}
+            {/* Profile */}
             <div className="flex items-center gap-4 pl-6 border-l border-slate-200">
               <div className="text-right">
                 <p className="text-sm font-black text-slate-800">{user?.username || 'Petualang'}</p>
@@ -164,12 +143,12 @@ const Dashboard = () => {
         </header>
 
         {/* CONTENT AREA */}
-        <main className="p-10 pt-2">
+        <main className="p-10 pt-8">
           <Routes>
             <Route path="/" element={<Navigate to="quest-map" replace />} />
             <Route path="quest-map" element={<QuestMap />} />
-            <Route path="leaderboard" element={<div className="p-10 text-center font-bold text-slate-400">Papan Peringkat Segera Hadir!</div>} />
-            <Route path="achievement" element={<div className="p-10 text-center font-bold text-slate-400">Pencapaian Segera Hadir!</div>} />
+            <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="achievement" element={<Achievement />} />
           </Routes>
         </main>
       </div>

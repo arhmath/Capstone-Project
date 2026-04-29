@@ -1,7 +1,7 @@
 model Module {
   id          String   @id @default(uuid())
   title       String   @db.VarChar(200)
-  educationLevel     EducationLevel
+  educationLevel     EducationLevel @map("education_level")
   topic       String   @db.VarChar(100)
   description String?
   orderIndex  Int      @default(0) @map("order_index")

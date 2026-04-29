@@ -6,6 +6,7 @@ const { errorHandler } = require('./middlewares/errorHandler');
 const { notFoundHandler } = require('./middlewares/notFoundHandler');
 
 const authRoutes = require('./routes/auth.routes');
+const educationLevelRoutes = require('./routes/education-level.routes');
 
 const app = express();
 
@@ -24,6 +25,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/education-levels', educationLevelRoutes);
+
 
 app.use(notFoundHandler); // 404 untuk route yang tidak ada
 app.use(errorHandler);    // Global error handler

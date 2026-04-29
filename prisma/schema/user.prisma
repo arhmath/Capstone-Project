@@ -24,7 +24,7 @@ model User {
 model UserEducationLevel {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
-  educationLevel    EducationLevel
+  educationLevel    EducationLevel @map("education_level")
   selectedAt DateTime @default(now()) @map("selected_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

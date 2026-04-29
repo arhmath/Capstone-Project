@@ -44,7 +44,7 @@ model LeaderboardWeekly {
   userId     String   @map("user_id")
   weekNumber Int      @map("week_number")
   year       Int
-  educationLevel  EducationLevel
+  educationLevel  EducationLevel @map("education_level")
   xpThisWeek Int      @default(0) @map("xp_this_week")
   rank       Int?
   updatedAt  DateTime @updatedAt @map("updated_at")

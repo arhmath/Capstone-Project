@@ -1,0 +1,15 @@
+model AiRecommendation {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  pretestSessionId     String   @unique @map("pretest_session_id")
+  weakTopics           Json     @map("weak_topics")
+  strongTopics         Json     @map("strong_topics")
+  recommendedModuleIds Json     @map("recommended_module_ids")
+  generatedAt          DateTime @default(now()) @map("generated_at")
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pretestSession PretestSession @relation(fields: [pretestSessionId], references: [id])
+
+  @@index([userId])
+  @@map("ai_recommendations")
+}

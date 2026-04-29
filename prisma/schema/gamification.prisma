@@ -1,0 +1,57 @@
+model UserXp {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  totalXp       Int      @default(0) @map("total_xp")
+  level         Int      @default(1)
+  xpToNextLevel Int      @default(100) @map("xp_to_next_level")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_xp")
+}
+
+model XpTransaction {
+  id         String       @id @default(uuid())
+  userId     String       @map("user_id")
+  xpAmount   Int          @map("xp_amount")
+  sourceType XpSourceType @map("source_type")
+  sourceId   String?      @map("source_id")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("xp_transactions")
+}
+
+model UserStreak {
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  currentStreak    Int      @default(0) @map("current_streak")
+  longestStreak    Int      @default(0) @map("longest_streak")
+  lastActivityDate DateTime @map("last_activity_date") @db.Date
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_streaks")
+}
+
+model LeaderboardWeekly {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  weekNumber Int      @map("week_number")
+  year       Int
+  educationLevel  EducationLevel
+  xpThisWeek Int      @default(0) @map("xp_this_week")
+  rank       Int?
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekNumber, year])
+  @@index([weekNumber, year, educationLevel, xpThisWeek])
+  @@map("leaderboard_weekly")
+}

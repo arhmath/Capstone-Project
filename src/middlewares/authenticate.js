@@ -3,18 +3,6 @@ const { JWT_SECRET } = require('../config/env');
 const prisma = require('../config/prisma');
 const api = require('../utils/apiResponse');
 
-/**
- * Middleware autentikasi — wajib dipasang di semua route yang butuh login.
- *
- * Cara kerja:
- * 1. Ambil token dari header Authorization: Bearer <token>
- * 2. Verify token dengan JWT_SECRET
- * 3. Cari user di DB berdasarkan userId dari payload token
- * 4. Simpan data user ke req.user agar controller bisa pakai
- *
- * Usage di route:
- *   router.get('/me', authenticate, controller.me);
- */
 const authenticate = async (req, res, next) => {
   try {
     // 1. Cek header Authorization

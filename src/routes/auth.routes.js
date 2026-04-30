@@ -4,8 +4,6 @@ const { authenticate } = require('../middlewares/authenticate');
 const { validate } = require('../middlewares/validate');
 const authController = require('../controllers/auth.controller');
 
-// ─── Validation rules ─────────────────────────────────────────
-
 const registerRules = [
   body('name')
     .trim()
@@ -35,7 +33,6 @@ const loginRules = [
     .notEmpty().withMessage('Password wajib diisi'),
 ];
 
-// ─── Route Definitions ────────────────────────────────────────
 
 // Public routes (tidak butuh token)
 router.post('/register', validate(registerRules), authController.register);

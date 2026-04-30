@@ -2,11 +2,6 @@ const authService = require('../services/auth.service');
 const { generateToken } = require('../utils/generateToken');
 const api = require('../utils/apiResponse');
 
-
-// ─────────────────────────────────────────────────────────────
-// POST /api/auth/register
-// Body: { name, email, password }
-// ─────────────────────────────────────────────────────────────
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -30,10 +25,6 @@ const register = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// POST /api/auth/login
-// Body: { email, password }
-// ─────────────────────────────────────────────────────────────
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -57,9 +48,6 @@ const login = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/auth/me  [Butuh authenticate middleware]
-// ─────────────────────────────────────────────────────────────
 const me = async (req, res, next) => {
   try {
     // req.user sudah diisi oleh middleware authenticate
@@ -76,9 +64,6 @@ const me = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// POST /api/auth/logout  [Butuh authenticate middleware]
-// ─────────────────────────────────────────────────────────────
 const logout = async (req, res) => {
   return api.success(res, null, 'Logout berhasil.');
 };

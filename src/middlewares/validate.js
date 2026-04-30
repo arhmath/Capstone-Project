@@ -1,19 +1,6 @@
 const { validationResult } = require('express-validator');
 const api = require('../utils/apiResponse');
 
-/**
- * Wrapper untuk express-validator.
- * Terima array validation rules, jalankan semua, lalu cek hasilnya.
- *
- * Usage di route:
- *   router.post('/register',
- *     validate([
- *       body('email').isEmail().withMessage('Email tidak valid'),
- *       body('password').isLength({ min: 6 }),
- *     ]),
- *     controller.register
- *   );
- */
 const validate = (rules) => [
   // Spread semua validation rules
   ...rules,

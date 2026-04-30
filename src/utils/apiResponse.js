@@ -1,12 +1,3 @@
-/**
- * Standarisasi shape response API.
- * Semua endpoint WAJIB menggunakan helper ini supaya frontend
- * bisa selalu expect format yang sama:
- *
- * Success : { success: true,  message: "...", data: {...} }
- * Error   : { success: false, message: "...", errors: [...] }
- */
-
 const success = (res, data = null, message = 'Berhasil', statusCode = 200) => {
   return res.status(statusCode).json({ success: true, message, data });
 };

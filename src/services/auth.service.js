@@ -1,17 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
 
-/**
- * AUTH SERVICE
- * Berisi semua business logic untuk auth.
- * Controller hanya handle request/response — logic ada di sini.
- */
-
-/**
- * Cek apakah email sudah terdaftar.
- * @param {string} email
- * @returns {Promise<boolean>}
- */
 const isEmailTaken = async (email) => {
   const user = await prisma.user.findUnique({
     where: { email },
@@ -20,14 +9,6 @@ const isEmailTaken = async (email) => {
   return !!user;
 };
 
-/**
- * Buat user baru + inisialisasi data gamifikasi (user_xp, user_streaks).
- * Semua dibungkus dalam satu transaction supaya kalau salah satu gagal,
- * semua rollback — tidak ada user tanpa XP atau streak.
- *
- * @param {{ name: string, email: string, password: string }} data
- * @returns {Promise<{ id, name, email, avatarUrl }>}
- */
 const createUser = async ({ name, email, password }) => {
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -58,15 +39,6 @@ const createUser = async ({ name, email, password }) => {
   return user;
 };
 
-/**
- * Verifikasi kredensial login.
- * Menggunakan bcrypt.compare untuk check password — TIDAK pernah
- * compare plain text langsung supaya aman dari timing attack.
- *
- * @param {string} email
- * @param {string} password - plain text dari request body
- * @returns {Promise<{ id, name, email, avatarUrl } | null>} null jika gagal
- */
 const verifyCredentials = async (email, password) => {
   // Ambil user beserta passwordHash — field ini tidak di-select di tempat lain
   const user = await prisma.user.findUnique({
@@ -102,13 +74,6 @@ const verifyCredentials = async (email, password) => {
   return safeUser;
 };
 
-/**
- * Ambil profil lengkap user berdasarkan ID.
- * Digunakan oleh endpoint GET /auth/me.
- *
- * @param {string} userId
- * @returns {Promise<object | null>}
- */
 const getUserById = async (userId) => {
   return prisma.user.findUnique({
     where: { id: userId },

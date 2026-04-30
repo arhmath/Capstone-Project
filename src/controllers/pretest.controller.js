@@ -1,0 +1,91 @@
+const pretestService = require('../services/pretest.service');
+const api = require('../utils/apiResponse');
+
+// GET /api/pretest/questions?educationLevel=middle
+const getQuestions = async (req, res, next) => {
+  try {
+    const { educationLevel } = req.query;
+
+    const questions = await pretestService.getQuestions(educationLevel);
+
+    return api.success(res, {
+      educationLevel,
+      total: questions.length,
+      questions,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/pretest/sessions
+// Body: { educationLevel: "middle" }
+const createSession = async (req, res, next) => {
+  try {
+    const { educationLevel } = req.body;
+    const userId = req.user.id;
+
+    const session = await pretestService.createSession(userId, educationLevel);
+
+    return api.created(res, session, 'Sesi pretest baru berhasil dibuat');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/pretest/sessions/:id/answer
+// Body: { questionId, optionId, timeTaken }
+// Dipanggil setiap kali user memilih jawaban.
+// Response langsung berisi isCorrect + correctOption (jika salah)
+// supaya frontend bisa tampilkan halaman koreksi sebelum soal berikutnya.
+const submitAnswer = async (req, res, next) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+    const { questionId, optionId, timeTaken } = req.body;
+
+    const result = await pretestService.submitAnswer(
+      sessionId,
+      userId,
+      questionId,
+      optionId,
+      timeTaken
+    );
+
+    return api.success(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/pretest/sessions/:id/finish
+// Dipanggil setelah user selesai menjawab semua soal.
+// Menghitung total skor dan topicScores dari semua jawaban.
+const finishSession = async (req, res, next) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+
+    const result = await pretestService.finishSession(sessionId, userId);
+
+    return api.success(res, result, 'Sesi pretest berhasil diselesaikan');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/pretest/sessions/:id/result
+const getResult = async (req, res, next) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+
+    const result = await pretestService.getResult(sessionId, userId);
+
+    return api.success(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getQuestions, createSession, submitAnswer, finishSession, getResult };

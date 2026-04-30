@@ -1,12 +1,5 @@
 const api = require('../utils/apiResponse');
 
-/**
- * Global error handler — HARUS dipasang paling bawah di app.js
- * setelah semua routes.
- *
- * Express mengenali error handler dari 4 parameter: (err, req, res, next)
- * Semua error yang di-next(err) dari controller/middleware akan masuk sini.
- */
 const errorHandler = (err, req, res, next) => {
   console.error(`[ERROR] ${req.method} ${req.originalUrl}`);
   console.error(err);

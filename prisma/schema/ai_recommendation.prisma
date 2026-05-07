@@ -2,14 +2,16 @@ model AiRecommendation {
   id                   String   @id @default(uuid())
   userId               String   @map("user_id")
   pretestSessionId     String   @unique @map("pretest_session_id")
-  weakTopics           Json     @map("weak_topics")
-  strongTopics         Json     @map("strong_topics")
-  recommendedModuleIds Json     @map("recommended_module_ids")
-  generatedAt          DateTime @default(now()) @map("generated_at")
+  recommendedModuleId   String   @map("recommended_module_id")
+  confidence Float
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pretestSession PretestSession @relation(fields: [pretestSessionId], references: [id])
+  pretestSession PretestSession @relation(fields: [pretestSessionId], references: [id], onDelete: Cascade)
+  module  Module         @relation(fields: [recommendedModuleId], references: [id])
 
   @@index([userId])
+  @@index([pretestSessionId])
   @@map("ai_recommendations")
 }

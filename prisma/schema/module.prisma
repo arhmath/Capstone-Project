@@ -9,6 +9,7 @@ model Module {
   isPublished Boolean  @default(false) @map("is_published")
   createdAt   DateTime @default(now()) @map("created_at")
 
+  aiRecommendation AiRecommendation[]
   pages      ModulePage[]
   quizzes    Quiz[]
   progresses UserModuleProgress[]

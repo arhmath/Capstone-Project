@@ -16,7 +16,6 @@ model User {
   userXp            UserXp?
   xpTransactions    XpTransaction[]
   userStreak        UserStreak?
-  leaderboard       LeaderboardWeekly[]
 
   @@map("users")
 }

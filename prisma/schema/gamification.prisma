@@ -38,20 +38,3 @@ model UserStreak {
 
   @@map("user_streaks")
 }
-
-model LeaderboardWeekly {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  weekNumber Int      @map("week_number")
-  year       Int
-  educationLevel  EducationLevel @map("education_level")
-  xpThisWeek Int      @default(0) @map("xp_this_week")
-  rank       Int?
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, weekNumber, year])
-  @@index([weekNumber, year, educationLevel, xpThisWeek])
-  @@map("leaderboard_weekly")
-}

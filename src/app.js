@@ -10,6 +10,7 @@ const educationLevelRoutes = require('./routes/education-level.routes');
 const pretestRoutes = require('./routes/pretest.routes');
 const aiRecommendationRoutes = require('./routes/ai-recommendation.routes');
 const moduleRoutes = require('./routes/module.routes');
+const quizRoutes = require('./routes/quiz.routes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/education-levels', educationLevelRoutes);
 app.use('/api/pretest', pretestRoutes);
 app.use('/api/recommendations', aiRecommendationRoutes);
 app.use('/api/modules', moduleRoutes);
+app.use('/api/quizzes', quizRoutes);
 
 app.use(notFoundHandler); // 404 untuk route yang tidak ada
 app.use(errorHandler);    // Global error handler

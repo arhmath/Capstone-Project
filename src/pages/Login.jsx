@@ -10,14 +10,23 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      login({ username: email.split('@')[0], email });
+    setError(null);
+
+    try {
+      await login({ email, password });
       navigate('/pilih-jenjang');
-    }, 800);
+    } catch (err) {
+      // Tampilkan pesan error dari BE
+      // Contoh: "Email atau password salah."
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const stats = [
@@ -175,6 +184,14 @@ const Login = () => {
                 </button>
               </div>
             </div>
+
+            {/* Pesan Error dari Backend */}
+            {error && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                <span className="text-red-500 text-lg">⚠️</span>
+                <p className="text-sm font-bold text-red-600">{error}</p>
+              </div>
+            )}
 
             <button
               type="submit"

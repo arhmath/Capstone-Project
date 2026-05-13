@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
+import { registerUser } from '../services/authService';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -13,20 +14,34 @@ const Register = () => {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Password tidak cocok!');
+      setError('Password tidak cocok!');
       return;
     }
+
     setIsLoading(true);
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      await registerUser({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      });
       navigate('/login');
-    }, 800);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const passwordChecks = [
@@ -180,6 +195,14 @@ const Register = () => {
                     </span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Pesan Error dari Backend */}
+            {error && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                <span className="text-red-500 text-lg">⚠️</span>
+                <p className="text-sm font-bold text-red-600">{error}</p>
               </div>
             )}
 

@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { updateUserStreak } = require('./streak.service');
 
 // Helper: hitung XP per soal berdasarkan waktu menjawab
 const calculateQuestionXp = (baseXp, timeLimitSeconds, timeTakenSeconds) => {
@@ -389,6 +390,8 @@ const finishSession = async (sessionId, userId) => {
         },
       });
     }
+
+    await updateUserStreak(userId);
 
     return { completed, userXpResult };
   });

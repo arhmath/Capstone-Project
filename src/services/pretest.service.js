@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { updateUserStreak } = require('./streak.service');
 
 // 1. GET QUESTIONS
 const getQuestions = async (educationLevel, limit = 20) => {
@@ -244,6 +245,8 @@ const finishSession = async (sessionId, userId) => {
     },
   });
 
+  await updateUserStreak(userId);
+
   return {
     ...completed,
     totalAnswers: answers.length,
@@ -279,7 +282,7 @@ const getResult = async (sessionId, userId) => {
                 select: {
                   id: true,
                   optionText: true,
-                  isCorrect: true,     
+                  isCorrect: true,
                   explanation: true,
                 },
               },

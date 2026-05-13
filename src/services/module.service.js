@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { updateUserStreak } = require('./streak.service');
 
 const getModules = async (userId) => {
     // 1. Ambil jenjang dari profil user yang login
@@ -268,6 +269,8 @@ const updateProgress = async (moduleId, userId, lastPage) => {
             completedAt: true,
         },
     });
+
+    await updateUserStreak(userId);
 
     return { ...progress, totalPages };
 };

@@ -1,7 +1,31 @@
 const prisma = require('../config/prisma');
 
 const selectLevel = async (userId, educationLevel) => {
-  const userEducationLevel = await prisma.userEducationLevel.create({
+  const existingLevel = await prisma.userEducationLevel.findFirst({
+    where: { userId },
+  });
+
+  if (existingLevel) {
+    // Jika sudah ada, update data lama
+    return await prisma.userEducationLevel.update({
+      where: {
+        id: existingLevel.id,
+      },
+      data: {
+        educationLevel,
+        selectedAt: new Date(),
+      },
+      select: {
+        id: true,
+        userId: true,
+        educationLevel: true,
+        selectedAt: true,
+      },
+    });
+  }
+
+  // Jika belum ada, buat baru
+  return await prisma.userEducationLevel.create({
     data: {
       userId,
       educationLevel,
@@ -13,8 +37,6 @@ const selectLevel = async (userId, educationLevel) => {
       selectedAt: true,
     },
   });
-
-  return userEducationLevel;
 };
 
 const getActiveLevel = async (userId) => {

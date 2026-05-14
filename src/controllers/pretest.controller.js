@@ -1,23 +1,6 @@
 const pretestService = require('../services/pretest.service');
 const api = require('../utils/apiResponse');
 
-// GET /api/pretest/questions?educationLevel=middle
-const getQuestions = async (req, res, next) => {
-  try {
-    const { educationLevel } = req.query;
-
-    const questions = await pretestService.getQuestions(educationLevel);
-
-    return api.success(res, {
-      educationLevel,
-      total: questions.length,
-      questions,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 // POST /api/pretest/sessions
 // Body: { educationLevel: "middle" }
 const createSession = async (req, res, next) => {
@@ -28,6 +11,29 @@ const createSession = async (req, res, next) => {
     const session = await pretestService.createSession(userId, educationLevel);
 
     return api.created(res, session, 'Sesi pretest baru berhasil dibuat');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/pretest/sessions/:id/questions
+const getSessionQuestions = async (req, res, next) => {
+  try {
+
+    const userId = req.user.id;
+    const sessionId = req.params.id;
+
+    const result = await pretestService.getSessionQuestions(
+      sessionId,
+      userId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Berhasil mengambil soal pretest',
+      data: result,
+    });
+
   } catch (err) {
     next(err);
   }
@@ -88,4 +94,4 @@ const getResult = async (req, res, next) => {
   }
 };
 
-module.exports = { getQuestions, createSession, submitAnswer, finishSession, getResult };
+module.exports = { getSessionQuestions, createSession, submitAnswer, finishSession, getResult };

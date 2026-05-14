@@ -14,10 +14,9 @@ const createSessionRules = [
     .notEmpty().withMessage('Jenjang pendidikan wajib dipilih')
 ];
 
-router.get('/questions',              
+router.get('/sessions/:id/questions',              
   authenticate, 
-  validate(getQuestionsRules), 
-  pretestController.getQuestions);
+  pretestController.getSessionQuestions);
 
 router.post('/sessions',              
   authenticate, 

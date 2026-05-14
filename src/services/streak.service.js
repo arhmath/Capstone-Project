@@ -1,8 +1,11 @@
-const { differenceInCalendarDays, startOfDay } = require('date-fns');
 const prisma = require('../config/prisma');
 
+const formatDate = (date) => {
+    return new Date(date).toISOString().split('T')[0];
+};
+
 const updateUserStreak = async (userId, tx = prisma) => {
-    const today = startOfDay(new Date());
+    const today = formatDate(new Date());
 
     let streak = await tx.userStreak.findUnique({
         where: { userId },
@@ -19,11 +22,14 @@ const updateUserStreak = async (userId, tx = prisma) => {
         });
     }
 
-    const lastActivityDate = startOfDay(new Date(streak.lastActivityDate));
+    const lastActivityDate = formatDate(new Date(streak.lastActivityDate));
 
-    const diffDays = differenceInCalendarDays(
-        today,
-        lastActivityDate
+    if (lastActivityDate === today) {
+        return streak;
+    }
+
+    const diffDays = Math.floor(
+        (new Date(today) - new Date(lastActivityDate)) / (1000 * 60 * 60 * 24)
     );
 
     // Sudah aktif hari ini
@@ -45,7 +51,7 @@ const updateUserStreak = async (userId, tx = prisma) => {
         data: {
             currentStreak: newCurrentStreak,
             longestStreak: newLongestStreak,
-            lastActivityDate: today,
+            lastActivityDate: new Date(),
         },
     });
 };

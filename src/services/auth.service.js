@@ -50,6 +50,11 @@ const verifyCredentials = async (email, password) => {
       avatarUrl: true,
       passwordHash: true,
       authProvider: true,
+      pretestSessions: {
+        orderBy: { completedAt: 'desc' },
+        take: 1,
+        select: { id: true },
+      },
     },
   });
 
@@ -75,7 +80,7 @@ const verifyCredentials = async (email, password) => {
 };
 
 const getUserById = async (userId) => {
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -93,8 +98,36 @@ const getUserById = async (userId) => {
         take: 1,
         select: { educationLevel: true, selectedAt: true },
       },
+      userStreak: {
+        select: { currentStreak: true, longestStreak: true, lastActivityDate: true },
+      },
     },
   });
+
+  if (!user) return null;
+
+  const totalXp = user.userXp?.totalXp ?? 0;
+
+  const countAboveMe = await prisma.userXp.count({
+    where: {
+      totalXp: {
+        gt: totalXp,
+      },
+
+      // hanya user yg punya education level
+      user: {
+        userEducationLevels: {
+          some: {},
+        },
+      },
+    },
+  });
+
+  return {
+    ...user,
+
+    leaderboardRank: countAboveMe + 1,
+  };
 };
 
 module.exports = { isEmailTaken, createUser, verifyCredentials, getUserById };

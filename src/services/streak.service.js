@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { checkAchievements } = require('./achievement.service');
 
 const formatDate = (date) => {
     return new Date(date).toISOString().split('T')[0];
@@ -66,6 +67,10 @@ const updateUserStreak = async (userId, tx = prisma) => {
             longestStreak: newLongestStreak,
             lastActivityDate: new Date(),
         },
+    });
+
+    const newAchievements = await checkAchievements(userId, 'streak_updated', {
+        currentStreak: updatedStreak.currentStreak,
     });
 };
 

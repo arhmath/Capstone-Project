@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { checkAchievements } = require('./achievement.service');
 
 // Helper: bangun payload AI dari data pretest session
 const buildAiPayload = async (userId, sessionId) => {
@@ -166,6 +167,8 @@ const saveRecommendations = async (
   await prisma.aiRecommendation.create({
     data: bestRecommendation,
   });
+
+  const newAchievements = await checkAchievements(userId, 'recommendation_received');
 };
 
 // 1. REQUEST RECOMMENDATION

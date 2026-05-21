@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { updateUserStreak } = require('./streak.service');
+const { checkAchievements } = require('./achievement.service');
 
 // Helper: hitung XP per soal berdasarkan waktu menjawab
 const calculateQuestionXp = (baseXp, timeLimitSeconds, timeTakenSeconds) => {
@@ -136,7 +137,7 @@ const createSession = async (userId, quizId) => {
   const quiz = await getQuizWithQuestions(quizId);
 
   // Cek apakah ada sesi in_progress untuk quiz ini
-    await prisma.quizSession.updateMany({
+  await prisma.quizSession.updateMany({
     where: {
       userId,
       quizId,
@@ -240,10 +241,10 @@ const submitAnswer = async (sessionId, userId, questionId, optionId, timeTaken) 
   // Hitung XP soal (hanya jika benar)
   const xpEarned = isCorrect
     ? calculateQuestionXp(
-        selectedOption.question.baseXp,
-        selectedOption.question.timeLimitSeconds,
-        timeTaken
-      )
+      selectedOption.question.baseXp,
+      selectedOption.question.timeLimitSeconds,
+      timeTaken
+    )
     : 0;
 
   // Simpan jawaban
@@ -335,11 +336,11 @@ const finishSession = async (sessionId, userId) => {
   });
 
   // Hitung statistik
-  const totalCorrect      = answers.filter((a) => a.isCorrect).length;
-  const totalScore        = Math.round((totalCorrect / answers.length) * 100);
-  const totalXpFromQuiz   = answers.reduce((sum, a) => sum + a.xpEarned, 0);
-  const totalDuration     = answers.reduce((sum, a) => sum + a.timeTakenSeconds, 0);
-  const isPassed          = totalScore >= quiz.passingScore;
+  const totalCorrect = answers.filter((a) => a.isCorrect).length;
+  const totalScore = Math.round((totalCorrect / answers.length) * 100);
+  const totalXpFromQuiz = answers.reduce((sum, a) => sum + a.xpEarned, 0);
+  const totalDuration = answers.reduce((sum, a) => sum + a.timeTakenSeconds, 0);
+  const isPassed = totalScore >= quiz.passingScore;
 
   // XP bonus dari modul jika lulus (ambil dari quiz.maxXp)
   const moduleBonusXp = isPassed ? quiz.maxXp : 0;
@@ -396,8 +397,25 @@ const finishSession = async (sessionId, userId) => {
     }
 
     await updateUserStreak(userId);
+    const newAchievements = [];
 
-    return { completed, userXpResult };
+    if (isPassed) {
+      const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore });
+      newAchievements.push(...quizAch);
+    }
+
+    if (moduleBonusXp > 0) {
+      const moduleAch = await checkAchievements(userId, 'module_completed');
+      newAchievements.push(...moduleAch);
+    }
+
+    const xpAch = await checkAchievements(userId, 'xp_updated', {
+      totalXp: result.userXpResult.totalXp,
+      level: result.userXpResult.level,
+    });
+    newAchievements.push(...xpAch);
+
+    return { completed, userXpResult, newAchievements };
   });
 
   return {

@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { updateUserStreak } = require('./streak.service');
+const { checkAchievements } = require('./achievement.service');
 
 // 1. CREATE SESSION
 const createSession = async (userId, educationLevel) => {
@@ -345,6 +346,7 @@ const finishSession = async (sessionId, userId) => {
   });
 
   await updateUserStreak(userId);
+  const newAchievements = await checkAchievements(userId, 'pretest_completed');
 
   return {
     ...completed,

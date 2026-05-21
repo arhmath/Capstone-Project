@@ -16,6 +16,7 @@ model User {
   userXp            UserXp?
   xpTransactions    XpTransaction[]
   userStreak        UserStreak?
+  userAchievements UserAchievement[]
 
   @@map("users")
 }

@@ -26,4 +26,14 @@ enum XpSourceType {
   module
   streak_bonus
   pretest
+  achievement
+}
+
+enum AchievementCategory {
+  onboarding
+  module
+  quiz
+  streak
+  xp
+  level
 }

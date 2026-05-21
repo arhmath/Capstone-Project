@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
+const { checkAchievements } = require('./achievement.service');
 
 const isEmailTaken = async (email) => {
   const user = await prisma.user.findUnique({
@@ -73,6 +74,8 @@ const verifyCredentials = async (email, password) => {
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   }).catch(console.error);
+
+  const newAchievements = await checkAchievements(user.id, 'first_login');
 
   // Hapus passwordHash dari return value — jangan pernah kirim ke client
   const { passwordHash, ...safeUser } = user;

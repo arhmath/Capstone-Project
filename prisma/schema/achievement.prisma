@@ -1,0 +1,30 @@
+model Achievement {
+  id          String          @id @default(uuid())
+  code        String          @unique 
+  title       String          @db.VarChar(100)
+  description String
+  iconUrl     String?         @map("icon_url")
+  category    AchievementCategory @map("category")
+  requirement Int             // angka syarat: misal streak=7, xp=500, modul=5
+  xpReward    Int             @default(0) @map("xp_reward")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  achievementId String      @map("achievement_id")
+  earnedAt      DateTime    @default(now()) @map("earned_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}

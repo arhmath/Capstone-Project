@@ -11,6 +11,15 @@ const updateUserStreak = async (userId, tx = prisma) => {
         where: { userId },
     });
 
+    const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+            createdAt: true,
+        },
+    });
+
+    const registerDate = formatDate(user.createdAt);
+
     if (!streak) {
         return tx.userStreak.create({
             data: {
@@ -37,10 +46,14 @@ const updateUserStreak = async (userId, tx = prisma) => {
         return streak;
     }
 
-    let newCurrentStreak = 1; 
+    let newCurrentStreak = 1;
 
     // Beruntun
     if (diffDays === 1) {
+        newCurrentStreak = streak.currentStreak + 1;
+    }
+
+    if (registerDate === today) {
         newCurrentStreak = streak.currentStreak + 1;
     }
 

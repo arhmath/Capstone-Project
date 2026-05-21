@@ -136,20 +136,26 @@ const createSession = async (userId, quizId) => {
   const quiz = await getQuizWithQuestions(quizId);
 
   // Cek apakah ada sesi in_progress untuk quiz ini
-  const activeSession = await prisma.quizSession.findFirst({
-    where: { userId, quizId, status: 'in_progress' },
-    select: { id: true },
+    await prisma.quizSession.updateMany({
+    where: {
+      userId,
+      quizId,
+      status: 'in_progress',
+    },
+    data: {
+      status: 'completed',
+      completedAt: new Date(),
+    },
   });
 
-  if (activeSession) {
-    const err = new Error('Masih ada sesi kuis yang belum selesai');
-    err.status = 409;
-    err.data = { activeSessionId: activeSession.id };
-    throw err;
-  }
-
+  // Buat sesi baru
   const session = await prisma.quizSession.create({
-    data: { userId, quizId },
+    data: {
+      userId,
+      quizId,
+      status: 'in_progress',
+      startedAt: new Date(),
+    },
     select: {
       id: true,
       userId: true,
@@ -377,9 +383,7 @@ const finishSession = async (sessionId, userId) => {
       await tx.userModuleProgress.upsert({
         where: { userId_moduleId: { userId, moduleId: quiz.moduleId } },
         update: {
-          isCompleted: true,
           xpEarned: moduleBonusXp,
-          completedAt: new Date(),
         },
         create: {
           userId,

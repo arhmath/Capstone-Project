@@ -64,15 +64,15 @@ const getMyStreak = async (userId) => {
   }
 
   // Cek apakah streak masih aktif (lastActivityDate harus kemarin atau hari ini)
-  const today     = new Date();
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const lastDate  = new Date(streak.lastActivityDate);
+  const lastDate = new Date(streak.lastActivityDate);
   lastDate.setHours(0, 0, 0, 0);
 
-  const isActive  = lastDate >= yesterday;
+  const isActive = lastDate >= yesterday;
 
   return {
     ...streak,
@@ -90,20 +90,24 @@ const getLeaderboard = async (userId, educationLevelFilter, limit = 20) => {
 
   // Tentukan filter educationLevel yang dipakai
   const useFilter = educationLevelFilter === 'all'
-    ? null                                          
+    ? null
     : (educationLevelFilter ?? userEducation?.educationLevel ?? null);
 
   // Query leaderboard dari UserXp join User join UserEducationLevel
   const leaderboard = await prisma.userXp.findMany({
-    where: useFilter
-      ? {
-          user: {
-            userEducationLevels: {
-              some: { educationLevel: useFilter },
+    where: {
+      user: {
+        userEducationLevels: useFilter
+          ? {
+            some: {
+              educationLevel: useFilter,
             },
+          }
+          : {
+            some: {},
           },
-        }
-      : undefined,
+      },
+    },
     select: {
       userId: true,
       totalXp: true,
@@ -190,15 +194,15 @@ const getDashboard = async (userId) => {
 
   const rankInLevel = userEducation
     ? await prisma.userXp.count({
-        where: {
-          totalXp: { gt: myXpData?.totalXp ?? 0 },
-          user: {
-            userEducationLevels: {
-              some: { educationLevel: userEducation.educationLevel },
-            },
+      where: {
+        totalXp: { gt: myXpData?.totalXp ?? 0 },
+        user: {
+          userEducationLevels: {
+            some: { educationLevel: userEducation.educationLevel },
           },
         },
-      })
+      },
+    })
     : null;
 
   // Progress modul

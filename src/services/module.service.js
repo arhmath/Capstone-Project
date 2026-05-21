@@ -34,6 +34,17 @@ const getModules = async (userId) => {
             _count: {
                 select: { pages: true },
             },
+            quizzes: {
+                select: {
+                    id: true,
+                    title: true,
+                    sessions: {
+                        where: {
+                            userId: userId,
+                        }
+                    }
+                },
+            },
         },
         orderBy: [
             { topic: 'asc' },
@@ -250,15 +261,34 @@ const updateProgress = async (moduleId, userId, lastPage) => {
         throw err;
     }
 
+    const existingProgress = await prisma.userModuleProgress.findUnique({
+        where: {
+            userId_moduleId: {
+                userId,
+                moduleId,
+            },
+        },
+    });
+
+    const isCompleted =
+        existingProgress?.isCompleted ||
+        pageNum === totalPages;
+
     const progress = await prisma.userModuleProgress.upsert({
         where: { userId_moduleId: { userId, moduleId } },
         update: {
             lastPage: pageNum,
+            isCompleted: isCompleted,
+            completedAt: isCompleted && !existingProgress?.completedAt
+                ? new Date()
+                : existingProgress?.completedAt,
         },
         create: {
             userId,
             moduleId,
             lastPage: pageNum,
+            isCompleted,
+            completedAt: isCompleted ? new Date() : null,
         },
         select: {
             moduleId: true,

@@ -104,6 +104,19 @@ const getUserById = async (userId) => {
       userStreak: {
         select: { currentStreak: true, longestStreak: true, lastActivityDate: true },
       },
+      userAchievements: {
+        select: {
+          achievement: {
+            select: { code: true, title: true, description: true, xpReward: true },
+          },
+          earnedAt: true,
+        },
+      },
+      _count: {
+        select: {
+          userAchievements: true,
+        }
+      }
     },
   });
 

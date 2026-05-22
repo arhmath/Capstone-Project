@@ -14,7 +14,7 @@ const STAT_CARDS = (user) => [
   { label: 'Total XP', value: (user?.xp || 0).toLocaleString(), icon: <Star size={18} fill="currentColor" />, color: 'text-mq-orange', bg: 'bg-orange-50', border: 'border-orange-100' },
   { label: 'Level', value: user?.level || 1, icon: <Zap size={18} fill="currentColor" />, color: 'text-mq-primary', bg: 'bg-blue-50', border: 'border-blue-100' },
   { label: 'Streak', value: user?.streak || 0, icon: <Flame size={18} fill="currentColor" />, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100' },
-  { label: 'Pencapaian', value: '1 / 9', icon: <Award size={18} />, color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-100' },
+  { label: 'Pencapaian', value: `${user?.totalAchievements || 0} / 9`, icon: <Award size={18} />, color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-100' },
 ];
 
 // ─── XP PROGRESS UTIL ────────────────────────────────────────────────────────

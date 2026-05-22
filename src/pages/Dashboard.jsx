@@ -72,7 +72,7 @@ const Dashboard = () => {
             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-mq-primary rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(((user?.xp || 0) % 1000) / 10, 100)}%` }}
+                style={{ width: `${Math.min(((user?.xp || 0) % 100) / 10, 100)}%` }}
               />
             </div>
           </div>

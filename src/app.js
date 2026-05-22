@@ -12,6 +12,7 @@ const aiRecommendationRoutes = require('./routes/ai-recommendation.routes');
 const moduleRoutes = require('./routes/module.routes');
 const quizRoutes = require('./routes/quiz.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
+const achievementRoutes = require('./routes/achievement.routes');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/recommendations', aiRecommendationRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 app.use(notFoundHandler); // 404 untuk route yang tidak ada
 app.use(errorHandler);    // Global error handler

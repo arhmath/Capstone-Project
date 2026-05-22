@@ -188,25 +188,37 @@ const triggerCheckers = {
 
 // GET badges user
 const getMyBadges = async (userId) => {
-    const badges = await prisma.userAchievement.findMany({
-        where: { userId },
-        select: {
-            earnedAt: true,
-            achievement: {
-                select: {
-                    code: true,
-                    title: true,
-                    description: true,
-                    iconUrl: true,
-                    category: true,
-                    xpReward: true,
-                },
+    const [allAchievements, userAchievements] = await Promise.all([
+        prisma.achievement.findMany({
+            select: {
+                id: true,
+                code: true,
+                title: true,
+                description: true,
+                iconUrl: true,
+                category: true,
+                xpReward: true,
             },
-        },
-        orderBy: { earnedAt: 'desc' },
-    });
+            orderBy: { category: 'asc' },
+        }),
+        prisma.userAchievement.findMany({
+            where: { userId },
+            select: {
+                achievementId: true,
+                earnedAt: true,
+            },
+        }),
+    ]);
 
-    return badges;
+    const earnedMap = new Map(
+        userAchievements.map(ua => [ua.achievementId, ua.earnedAt])
+    );
+
+    return allAchievements.map(achievement => ({
+        achievement,
+        earned: earnedMap.has(achievement.id),
+        earnedAt: earnedMap.get(achievement.id) ?? null,
+    }));
 };
 
 module.exports = { checkAchievements, grantAchievement, getMyBadges };

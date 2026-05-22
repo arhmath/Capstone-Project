@@ -397,26 +397,27 @@ const finishSession = async (sessionId, userId) => {
     }
 
     await updateUserStreak(userId);
-    const newAchievements = [];
 
-    if (isPassed) {
-      const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore });
-      newAchievements.push(...quizAch);
-    }
-
-    if (moduleBonusXp > 0) {
-      const moduleAch = await checkAchievements(userId, 'module_completed');
-      newAchievements.push(...moduleAch);
-    }
-
-    const xpAch = await checkAchievements(userId, 'xp_updated', {
-      totalXp: result.userXpResult.totalXp,
-      level: result.userXpResult.level,
-    });
-    newAchievements.push(...xpAch);
-
-    return { completed, userXpResult, newAchievements };
+    return { completed, userXpResult };
   });
+
+  const newAchievements = [];
+
+  if (isPassed) {
+    const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore });
+    newAchievements.push(...quizAch);
+  }
+
+  if (moduleBonusXp > 0) {
+    const moduleAch = await checkAchievements(userId, 'module_completed');
+    newAchievements.push(...moduleAch);
+  }
+
+  const xpAch = await checkAchievements(userId, 'xp_updated', {
+    totalXp: result.userXpResult.totalXp,
+    level: result.userXpResult.level,
+  });
+  newAchievements.push(...xpAch);
 
   return {
     ...result.completed,
@@ -426,6 +427,7 @@ const finishSession = async (sessionId, userId) => {
     moduleBonusXp,
     isPassed,
     userXp: result.userXpResult,
+    achievementsEarned: newAchievements,
   };
 };
 

@@ -14,7 +14,9 @@ const buildAiPayload = async (userId, sessionId) => {
           isCorrect: true,
           timeTakenSeconds: true,
           question: {
-            select: { topic: true },
+            select: {
+              topic: true,
+            },
           },
         },
       },
@@ -37,48 +39,34 @@ const buildAiPayload = async (userId, sessionId) => {
     const err = new Error(
       'Selesaikan pretest terlebih dahulu sebelum mendapatkan rekomendasi'
     );
+
     err.status = 400;
+
     throw err;
   }
 
-  // Hitung statistik per topic
-  const topicStats = {};
+  // Build records sesuai schema FastAPI
+  const records = session.answers.map(
+    (answer, index) => ({
+      user_id: userId,
 
-  for (const answer of session.answers) {
-    const topic = answer.question.topic;
+      // nomor urut manual
+      no_soal: index + 1,
 
-    if (!topicStats[topic]) {
-      topicStats[topic] = {
-        correct: 0,
-        total: 0,
-        totalDuration: 0,
-      };
-    }
+      materi: answer.question.topic,
 
-    topicStats[topic].total += 1;
-    topicStats[topic].totalDuration += answer.timeTakenSeconds || 0;
+      benar_salah: answer.isCorrect ? 1 : 0,
 
-    if (answer.isCorrect) {
-      topicStats[topic].correct += 1;
-    }
-  }
-
-  // Format payload untuk AI
-  const topicScores = {};
-
-  for (const [topic, stat] of Object.entries(topicStats)) {
-    topicScores[topic] = {
-      score: Math.round((stat.correct / stat.total) * 100),
-      average_duration_seconds: Math.round(
-        stat.totalDuration / stat.total
-      ),
-      number_of_questions: stat.total,
-    };
-  }
+      // fallback minimal 1 detik
+      waktu_pengerjaan:
+        answer.timeTakenSeconds > 0
+          ? answer.timeTakenSeconds
+          : 1,
+    })
+  );
 
   return {
-    user_id: userId,
-    topic_scores: topicScores,
+    records,
   };
 };
 
@@ -134,6 +122,10 @@ const saveRecommendations = async (
   sessionId,
   recommendations
 ) => {
+
+  console.log(
+    JSON.stringify(recommendations, null, 2)
+  );
   // Hapus rekomendasi lama
   await prisma.aiRecommendation.deleteMany({
     where: {
@@ -259,21 +251,27 @@ const requestRecommendation = async (userId, sessionId) => {
    */
 
   if (
-    !aiResponse?.recommendations ||
-    !Array.isArray(aiResponse.recommendations)
+    !aiResponse?.weak_topics ||
+    !Array.isArray(aiResponse.weak_topics)
   ) {
     const err = new Error('Respons AI tidak valid');
-
     err.status = 502;
-
     throw err;
   }
 
   // Resolve weak topic -> module
-  const recommendations = await resolveModulesFromWeakTopics(
-    aiResponse.recommendations,
-    userId
-  );
+  const weakRecommendations =
+    aiResponse.weak_topics.map((topic) => ({
+      weak_topic: topic,
+      confidence: aiResponse.confidence,
+    }));
+
+  const recommendations =
+    await resolveModulesFromWeakTopics(
+      weakRecommendations,
+      userId
+    );
+
 
   // Simpan ke DB
   await saveRecommendations(

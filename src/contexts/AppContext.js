@@ -1,29 +1,40 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { loginUser, logoutUser, getMe } from '../services/authService';
 import { selectEducationLevel } from '../services/educationLevelService';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // ── STATE ─────────────────────────────────────────────────────────────────
 
   const [user, setUser] = useState(() => {
-    // Hydrate dari localStorage saat pertama load
-    const saved = localStorage.getItem('mq_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('mq_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [preTestResult, setPreTestResult] = useState(() => {
-    const saved = localStorage.getItem('mq_pretest');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('mq_pretest');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [achievements, setAchievements] = useState([
-    { id: 1, title: 'First Step', icon: '🚀', desc: 'Selesaikan Pre-test pertama', unlocked: true },
-    { id: 2, title: 'Math Warrior', icon: '⚔️', desc: 'Selesaikan 10 tantangan', unlocked: false },
-    { id: 3, title: '7 Days Streak', icon: '🔥', desc: 'Belajar 7 hari berturut-turut', unlocked: false },
+    { id: 1, title: 'First Step',    icon: '🚀', desc: 'Selesaikan Pre-test pertama',        unlocked: true  },
+    { id: 2, title: 'Math Warrior',  icon: '⚔️', desc: 'Selesaikan 10 tantangan',             unlocked: false },
+    { id: 3, title: '7 Days Streak', icon: '🔥', desc: 'Belajar 7 hari berturut-turut',       unlocked: false },
   ]);
 
-  // ── SYNC KE LOCALSTORAGE ───────────────────────────────────────────────────
+  // Cegah refreshUser duplikat saat mount
+  const hasMounted = useRef(false);
+
+  // ── SYNC KE LOCALSTORAGE ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (user) {
@@ -33,80 +44,76 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Refresh sekali saat app pertama dimuat (bukan setelah login)
   useEffect(() => {
-    refreshUser();
+    if (hasMounted.current) return;
+    hasMounted.current = true;
+
+    const token = localStorage.getItem('mq_token');
+    if (token) {
+      refreshUser();
+    }
   }, []);
 
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+
+  /**
+   * Normalisasi data user dari BE ke format FE.
+   * Satu sumber kebenaran — tidak ada transformasi di tempat lain.
+   */
   const normalizeUser = (beUser) => {
-    const latestLevel = beUser.userEducationLevels?.[0]?.educationLevel || null;
+    const latestLevel =
+      beUser.userEducationLevels?.[0]?.educationLevel || null;
+
     return {
-      id: beUser.id,
+      id:       beUser.id,
       username: beUser.name,
-      email: beUser.email,
-      foto: beUser.avatarUrl
-        || `https://api.dicebear.com/7.x/avataaars/svg?seed=${beUser.name}`,
-      xp: beUser.userXp?.totalXp || 0,
-      level: beUser.userXp?.level || 1,
-      xpToNext: beUser.userXp?.xpToNextLevel || 100,
-      streak: beUser.userStreak?.currentStreak || 0,
-      jenjang: latestLevel,
-      rank: beUser.leaderboardRank || null,
+      email:    beUser.email,
+      foto:
+        beUser.avatarUrl ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(beUser.name)}`,
+      xp:       beUser.userXp?.totalXp        ?? 0,
+      level:    beUser.userXp?.level          ?? 1,
+      xpToNext: beUser.userXp?.xpToNextLevel  ?? 100,
+      streak:   beUser.userStreak?.currentStreak ?? 0,
+      jenjang:  latestLevel,
+      rank:     beUser.leaderboardRank        ?? null,
+      totalAchievements: beUser.totalAchievements ?? 0,
     };
   };
 
+  // ── AUTH ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Login → simpan token → fetch /me agar data selalu lengkap
+   * sebelum komponen pemanggil melakukan navigate().
+   */
   const login = async (credentials) => {
     const { user: beUser, token } = await loginUser(credentials);
 
-    // Simpan token untuk request selanjutnya
+    // Simpan token lebih dulu supaya refreshUser bisa pakai
     localStorage.setItem('mq_token', token);
 
-    // Set user ke state dengan format FE
+    // Set data awal dari response login (cepat)
     setUser(normalizeUser(beUser));
 
-    return {
-      user: beUser,
-      token,
-    };
-  };
-
-  const updateJenjang = async (educationLevel) => {
-    await selectEducationLevel(educationLevel);
-    setUser((prev) => ({ ...prev, jenjang: educationLevel }));
-  };
-
-  const syncXpFromBE = (userXpFromBE) => {
-    setUser((prev) => ({
-      ...prev,
-      xp: userXpFromBE.totalXp,
-      level: userXpFromBE.level,
-      xpToNext: userXpFromBE.xpToNextLevel,
-    }));
-  };
-
-  const addXP = (amount) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const newXP = prev.xp + amount;
-      const newLevel = Math.floor(newXP / 1000) + 1;
-      return { ...prev, xp: newXP, level: newLevel };
-    });
-  };
-
-  const refreshUser = async () => {
+    // Fetch /me untuk data yang paling lengkap & up-to-date
+    // (XP, streak, rank, dll. mungkin sudah berubah sejak token diterbitkan)
     try {
-      const beUser = await getMe();
-      setUser(normalizeUser(beUser));
-    } catch (err) {
-      // Token expired atau invalid → logout
-      if (err.status === 401) logout();
+      const freshBeUser = await getMe();
+      setUser(normalizeUser(freshBeUser));
+    } catch {
+      // Jika /me gagal, data dari login tetap cukup untuk lanjut
     }
+
+    return { user: beUser, token };
   };
 
   const logout = async () => {
     try {
       await logoutUser();
     } catch {
-      // Abaikan error logout dari BE
+      // Abaikan error dari BE
     }
     setUser(null);
     setPreTestResult(null);
@@ -115,7 +122,52 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem('mq_pretest');
   };
 
-  // ── PROVIDER ───────────────────────────────────────────────────────────────
+  // ── USER MUTATIONS ────────────────────────────────────────────────────────
+
+  const updateJenjang = async (educationLevel) => {
+    await selectEducationLevel(educationLevel);
+    setUser((prev) => ({ ...prev, jenjang: educationLevel }));
+  };
+
+  /**
+   * Sinkronisasi XP dari respons BE (misal setelah selesai quiz).
+   */
+  const syncXpFromBE = (userXpFromBE) => {
+    setUser((prev) => ({
+      ...prev,
+      xp:       userXpFromBE.totalXp,
+      level:    userXpFromBE.level,
+      xpToNext: userXpFromBE.xpToNextLevel,
+    }));
+  };
+
+  /**
+   * Tambah XP secara optimistis (tanpa menunggu BE).
+   * Gunakan syncXpFromBE setelahnya untuk sinkronisasi.
+   */
+  const addXP = (amount) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const newXP    = prev.xp + amount;
+      const newLevel = Math.floor(newXP / 1000) + 1;
+      return { ...prev, xp: newXP, level: newLevel };
+    });
+  };
+
+  /**
+   * Ambil ulang data user dari BE.
+   * Dipanggil otomatis saat mount (jika ada token) atau manual dari komponen.
+   */
+  const refreshUser = async () => {
+    try {
+      const beUser = await getMe();
+      setUser(normalizeUser(beUser));
+    } catch (err) {
+      if (err?.status === 401) logout();
+    }
+  };
+
+  // ── PROVIDER ──────────────────────────────────────────────────────────────
 
   return (
     <AppContext.Provider
@@ -123,6 +175,7 @@ export const AppProvider = ({ children }) => {
         user,
         setUser,
         login,
+        logout,
         updateJenjang,
         preTestResult,
         setPreTestResult,
@@ -131,7 +184,6 @@ export const AppProvider = ({ children }) => {
         addXP,
         syncXpFromBE,
         refreshUser,
-        logout,
       }}
     >
       {children}

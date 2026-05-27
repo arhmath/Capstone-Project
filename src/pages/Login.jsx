@@ -4,13 +4,16 @@ import { useApp } from '../contexts/AppContext';
 import { Star, Flame, Trophy, Zap, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { login } = useApp();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+
+  const [email,        setEmail]        = useState('');
+  const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [isLoading,    setIsLoading]    = useState(false);
+  const [error,        setError]        = useState(null);
+
+  // ── HANDLER ───────────────────────────────────────────────────────────────
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,31 +21,41 @@ const Login = () => {
     setError(null);
 
     try {
-      const response =await login({ email, password });
+      // login() di AppContext sudah menunggu /me selesai,
+      // sehingga saat navigate() dipanggil data user sudah lengkap.
+      const { user: beUser } = await login({ email, password });
 
-      const hasCompletedPreTest = response.user.pretestSessions.length > 0;
+      const hasCompletedPreTest = beUser.pretestSessions?.length > 0;
       navigate(hasCompletedPreTest ? '/dashboard/quest-map' : '/pilih-jenjang');
     } catch (err) {
-      // Tampilkan pesan error dari BE
-      // Contoh: "Email atau password salah."
-      setError(err.message);
+      setError(err.message || 'Login gagal. Coba lagi.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ── DATA ──────────────────────────────────────────────────────────────────
+
   const stats = [
-    { icon: <Trophy size={16} className="text-[#0259DD]" />, value: '100K+', label: 'Questers' },
-    { icon: <Flame size={16} className="text-[#FF6648]" />, value: '5M+', label: 'Soal Selesai' },
-    { icon: <Star size={16} className="text-[#0259DD]" fill="#0259DD" />, value: '4.9', label: 'Rating' },
+    { icon: <Trophy size={16} className="text-[#0259DD]" />,                      value: '100K+', label: 'Questers'     },
+    { icon: <Flame  size={16} className="text-[#FF6648]" />,                      value: '5M+',   label: 'Soal Selesai' },
+    { icon: <Star   size={16} className="text-[#0259DD]" fill="#0259DD" />, value: '4.9',   label: 'Rating'       },
   ];
+
+  const postLoginFeatures = [
+    { icon: '🗺️', label: 'Quest Map'    },
+    { icon: '🏆', label: 'Leaderboard'  },
+    { icon: '🎖️', label: 'Achievement'  },
+  ];
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] font-sans flex">
 
-      {/* ── Sisi Kiri: Branding ── */}
+      {/* ── Sisi Kiri: Branding (desktop only) ── */}
       <div className="hidden lg:flex w-[45%] bg-[#0259DD] flex-col justify-between p-12 relative overflow-hidden">
-        {/* Dekorasi lingkaran */}
+        {/* Dekorasi */}
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/5 rounded-full" />
         <div className="absolute bottom-32 -left-16 w-48 h-48 bg-white/5 rounded-full" />
         <div className="absolute top-1/2 right-8 w-24 h-24 bg-[#FF6648]/20 rounded-full" />
@@ -75,7 +88,7 @@ const Login = () => {
             Quest menunggumu. XP-mu masih tersimpan. Jadilah jawara matematika hari ini!
           </p>
 
-          {/* Kartu streak */}
+          {/* Streak card */}
           <div className="mt-8 bg-white/10 border border-white/15 rounded-2xl p-4 flex items-center gap-4 max-w-xs">
             <div className="w-12 h-12 bg-[#FF6648] rounded-xl flex items-center justify-center text-2xl shadow-lg">
               🔥
@@ -105,6 +118,7 @@ const Login = () => {
 
       {/* ── Sisi Kanan: Form ── */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+
         {/* Logo mobile */}
         <div
           onClick={() => navigate('/')}
@@ -117,7 +131,8 @@ const Login = () => {
         </div>
 
         <div className="w-full max-w-md">
-          {/* Badge XP */}
+
+          {/* Badge XP harian */}
           <div className="flex items-center gap-3 bg-[#FFE1D7]/40 border border-[#FFE1D7] rounded-2xl px-4 py-3 mb-8">
             <div className="w-8 h-8 bg-[#FF6648] rounded-xl flex items-center justify-center">
               <Zap size={16} className="text-white" fill="white" />
@@ -144,7 +159,10 @@ const Login = () => {
             </span>
           </p>
 
+          {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">
+
+            {/* Email */}
             <div>
               <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-2 ml-1">
                 Email
@@ -159,6 +177,7 @@ const Login = () => {
               />
             </div>
 
+            {/* Password */}
             <div>
               <div className="flex justify-between mb-2 ml-1">
                 <label className="text-xs font-black text-slate-600 uppercase tracking-widest">
@@ -187,7 +206,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Pesan Error dari Backend */}
+            {/* Error */}
             {error && (
               <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                 <span className="text-red-500 text-lg">⚠️</span>
@@ -195,6 +214,7 @@ const Login = () => {
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
@@ -215,17 +235,13 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Achievement chips */}
+          {/* Post-login features */}
           <div className="mt-8 pt-6 border-t border-slate-100">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 text-center">
               Yang menanti setelah login
             </p>
             <div className="flex gap-2 justify-center flex-wrap">
-              {[
-                { icon: '🗺️', label: 'Quest Map' },
-                { icon: '🏆', label: 'Leaderboard' },
-                { icon: '🎖️', label: 'Achievement' },
-              ].map((item, i) => (
+              {postLoginFeatures.map((item, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl shadow-sm"

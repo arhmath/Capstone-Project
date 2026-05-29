@@ -344,26 +344,6 @@ const Profile = () => {
               />
             </div>
           </div>
-
-          {/* Keamanan */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-50 flex items-center gap-2">
-              <Shield size={16} className="text-mq-primary" />
-              <h3 className="font-black text-slate-800">Keamanan Akun</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              <button className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-mq-primary/30 hover:bg-blue-50/30 transition-all group text-left">
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-mq-primary shadow-sm border border-slate-100">
-                  <Lock size={15} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-slate-800">Ganti Password</p>
-                  <p className="text-xs text-slate-400">Terakhir diubah: {user?.lastPasswordChange || 'Belum pernah'}</p>
-                </div>
-                <ChevronRight size={16} className="text-slate-300 group-hover:text-mq-primary transition-colors" />
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* ── KOLOM KANAN ── */}

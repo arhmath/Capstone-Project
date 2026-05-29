@@ -6,9 +6,7 @@ import {
   Trophy,
   Award,
   LogOut,
-  Bell,
-  Search,
-  Star,
+  Zap,
   User
 } from 'lucide-react';
 
@@ -114,37 +112,43 @@ const Dashboard = () => {
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
         {/* TOPBAR */}
-        <header className="h-24 px-10 flex items-center justify-between sticky top-0 bg-[#FDFCFB]/80 backdrop-blur-md z-10 border-b border-slate-100/50">
-          <div className="relative w-72">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cari quest atau materi..."
-              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-mq-blue-light/50 transition-all text-sm font-medium"
-            />
+        <header className="h-20 px-10 flex items-center justify-between sticky top-0 bg-[#FDFCFB]/80 backdrop-blur-md z-10 border-b border-slate-100/50">
+          
+          {/* KIRI: Judul halaman */}
+          <div>
+            <p className="text-xl font-black text-slate-800">
+              {navLinks.find(l => l.path === location.pathname)?.name ?? 'Dashboard'}
+            </p>
+            <p className="text-xs text-slate-400 font-medium">
+              Selamat datang {user?.username || 'Petualang'} !
+            </p>
           </div>
 
+          {/* KANAN: XP + Bell + Avatar */}
           <div className="flex items-center gap-6">
+
+            {/* XP Chip */}
             <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-              <Star className="text-mq-orange" fill="#FF6648" size={18} />
+              <Zap className="text-mq-orange" fill="#FF6648" size={18} />
               <span className="font-black text-slate-700">{user?.xp || 0} XP</span>
             </div>
 
-            <button className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-mq-primary transition-all relative">
-              <Bell size={20} />
-              <span className="absolute top-3 right-3 w-2 h-2 bg-mq-orange rounded-full border-2 border-white"></span>
-            </button>
-
-            {/* Avatar klik → profil */}
-            <Link to="/dashboard/profile" className="flex items-center gap-4 pl-6 border-l border-slate-200 hover:opacity-80 transition-opacity">
+            {/* Avatar + Nama */}
+            <Link
+              to="/dashboard/profile"
+              className="flex items-center gap-4 pl-6 border-l border-slate-200 hover:opacity-80 transition-opacity"
+            >
               <div className="text-right">
                 <p className="text-sm font-black text-slate-800">{user?.username || 'Petualang'}</p>
-                <p className="text-[10px] font-bold text-mq-primary uppercase tracking-wider">Level {user?.level || 1} Apprentice</p>
+                <p className="text-[10px] font-bold text-mq-primary uppercase tracking-wider">
+                  Level {user?.level || 1} Apprentice
+                </p>
               </div>
               <div className="w-12 h-12 bg-mq-peach rounded-2xl border-2 border-white shadow-md overflow-hidden">
                 <img src={user?.foto} alt="User Profile" className="w-full h-full object-cover" />
               </div>
             </Link>
+
           </div>
         </header>
 

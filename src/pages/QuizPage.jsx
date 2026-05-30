@@ -168,18 +168,16 @@ const FeedbackBar = ({ result, onNext, isLast, submitting }) => {
       className={`rounded-3xl p-5 sm:p-6 animate-slide-up ${correct ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}
     >
       <div className="flex items-start gap-3 sm:gap-4 mb-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${correct ? 'bg-green-100' : 'bg-red-100'}`}>
-          {correct ? '🎉' : '💡'}
-        </div>
         <div>
           <h3 className={`font-black text-lg mb-1 ${correct ? 'text-green-700' : 'text-red-700'}`}>
             {correct ? 'Jawaban Benar!' : 'Kurang Tepat...'}
           </h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            {correct
-              ? result.explanation || 'Hebat! Kamu menjawab dengan benar.'
-              : result.correctOption?.explanation || `Jawaban yang benar adalah "${result.correctOption?.optionText}".`
-            }
+            {result.explanation ||
+              (correct
+                ? 'Hebat! Kamu menjawab dengan benar.'
+                : `Jawaban yang benar adalah "${result.correctOption?.optionText}".`
+              )}
           </p>
           {!correct && result.correctOption && (
             <div className="mt-2 inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-xs font-black">

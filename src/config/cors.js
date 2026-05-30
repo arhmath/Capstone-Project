@@ -5,6 +5,7 @@ const allowedOrigins = [
   FRONTEND_URL,
   'http://localhost:5173', // Vite default
   'http://localhost:3000', // fallback CRA
+  'http://127.0.0.1:3000'
 ];
 
 module.exports = cors({

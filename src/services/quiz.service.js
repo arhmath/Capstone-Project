@@ -170,7 +170,13 @@ const createSession = async (userId, quizId) => {
 };
 
 // 4. SUBMIT ANSWER — 1 soal per request, return koreksi + xp langsung
-const submitAnswer = async (sessionId, userId, questionId, optionId, timeTaken) => {
+const submitAnswer = async (
+  sessionId,
+  userId,
+  questionId,
+  optionId,
+  timeTaken
+) => {
   const session = await prisma.quizSession.findUnique({
     where: { id: sessionId },
     select: { id: true, userId: true, status: true },
@@ -194,51 +200,84 @@ const submitAnswer = async (sessionId, userId, questionId, optionId, timeTaken) 
     throw err;
   }
 
-  // Cek soal sudah dijawab di sesi ini
+  // Cek apakah soal sudah dijawab
   const alreadyAnswered = await prisma.quizAnswer.findFirst({
-    where: { sessionId, questionId },
-    select: { id: true },
+    where: {
+      sessionId,
+      questionId,
+    },
+    select: {
+      id: true,
+    },
   });
 
   if (alreadyAnswered) {
-    const err = new Error('Soal sudah dijawab dalam sesi ini');
+    const err = new Error(
+      'Soal sudah dijawab dalam sesi ini'
+    );
     err.status = 409;
     throw err;
   }
 
-  // Ambil opsi yang dipilih
-  const selectedOption = await prisma.questionOption.findUnique({
-    where: { id: optionId },
-    select: {
-      id: true,
-      optionText: true,
-      isCorrect: true,
-      explanation: true,
-      question: {
-        select: {
-          id: true,
-          baseXp: true,
-          timeLimitSeconds: true,
+  // Ambil opsi yang dipilih + data soal
+  const selectedOption =
+    await prisma.questionOption.findUnique({
+      where: { id: optionId },
+      select: {
+        id: true,
+        optionText: true,
+        isCorrect: true,
+        explanation: true,
+
+        question: {
+          select: {
+            id: true,
+            questionText: true,
+            baseXp: true,
+            timeLimitSeconds: true,
+
+            quiz: {
+              select: {
+                module: {
+                  select: {
+                    title: true,
+                  },
+                },
+              },
+            },
+
+            options: {
+              select: {
+                id: true,
+                optionText: true,
+                isCorrect: true,
+                explanation: true,
+              },
+            },
+          },
         },
       },
-    },
-  });
+    });
 
   if (!selectedOption) {
-    const err = new Error('Opsi jawaban tidak ditemukan');
+    const err = new Error(
+      'Opsi jawaban tidak ditemukan'
+    );
     err.status = 404;
     throw err;
   }
 
   if (selectedOption.question.id !== questionId) {
-    const err = new Error('Opsi tidak termasuk dalam soal yang diberikan');
+    const err = new Error(
+      'Opsi tidak termasuk dalam soal yang diberikan'
+    );
     err.status = 400;
     throw err;
   }
 
   const isCorrect = selectedOption.isCorrect;
 
-  // Hitung XP soal (hanya jika benar)
+  // Hitung XP
   const xpEarned = isCorrect
     ? calculateQuestionXp(
       selectedOption.question.baseXp,
@@ -259,22 +298,125 @@ const submitAnswer = async (sessionId, userId, questionId, optionId, timeTaken) 
     },
   });
 
-  // Ambil opsi benar jika user salah
-  let correctOption = null;
-  if (!isCorrect) {
-    correctOption = await prisma.questionOption.findFirst({
-      where: { questionId, isCorrect: true },
-      select: { id: true, optionText: true, explanation: true },
+  // Ambil jawaban benar
+  const correctOption =
+    await prisma.questionOption.findFirst({
+      where: {
+        questionId,
+        isCorrect: true,
+      },
+      select: {
+        id: true,
+        optionText: true,
+        explanation: true,
+      },
     });
-  }
 
+  let generatedExplanation = null;
+
+  const emptyExplanation =
+    selectedOption.explanation == null ||
+    selectedOption.explanation.trim().length === 0;
+
+  console.log(
+    'EXPLANATION DB:',
+    selectedOption.explanation
+  );
+
+  console.log(
+    'EMPTY EXPLANATION:',
+    emptyExplanation
+  );
+
+  if (emptyExplanation) {
+    try {
+      const pilihan = {};
+
+      // Mapping pilihan menjadi A, B, C, D, dst.
+      selectedOption.question.options.forEach((opt, index) => {
+        const key = String.fromCharCode(65 + index);
+        pilihan[key] = opt.optionText;
+      });
+
+      // Cari key jawaban siswa
+      const jawabanSiswaKey =
+        Object.entries(pilihan).find(
+          ([_, value]) => value === selectedOption.optionText
+        )?.[0] || '';
+
+      // Cari key jawaban benar
+      const jawabanBenarKey =
+        Object.entries(pilihan).find(
+          ([_, value]) => value === correctOption?.optionText
+        )?.[0] || '';
+
+      console.log('GEN URL:', process.env.GEN_AI_SERVICE_URL);
+
+      // Request ke FastAPI AI Service
+      const response = await fetch(process.env.GEN_AI_SERVICE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          soal: selectedOption.question.questionText,
+          pilihan,
+          jawaban_siswa: jawabanSiswaKey,
+          jawaban_benar: jawabanBenarKey,
+          materi:
+            selectedOption.question.quiz?.module?.title || 'Matematika',
+          jenjang: 'sma',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI Service Error ${response.status}`);
+      }
+
+      const aiData = await response.json();
+
+      console.log('AI RESPONSE:', aiData);
+
+      generatedExplanation = aiData?.pembahasan || null;
+
+      // Simpan pembahasan ke database
+      if (generatedExplanation) {
+        await prisma.questionOption.update({
+          where: {
+            id: optionId,
+          },
+          data: {
+            explanation: generatedExplanation,
+          },
+        });
+      }
+    } catch (error) {
+      console.error(
+        'Gagal generate pembahasan AI FULL:',
+        error
+      );
+    }
+
+
+  }
   return {
     questionId,
     selectedOptionId: optionId,
     isCorrect,
     xpEarned,
-    explanation: isCorrect ? selectedOption.explanation : null,
-    correctOption: isCorrect ? null : correctOption,
+
+    explanation:
+      selectedOption.explanation ||
+      generatedExplanation ||
+      null,
+
+    correctOption: isCorrect
+      ? null
+      : {
+        id: correctOption?.id,
+        optionText: correctOption?.optionText || null,
+      },
   };
 };
 
@@ -392,6 +534,18 @@ const finishSession = async (sessionId, userId) => {
           isCompleted: true,
           xpEarned: moduleBonusXp,
           completedAt: new Date(),
+        },
+      });
+
+
+    }
+
+    if (!userXpResult) {
+      userXpResult = await tx.userXp.findUnique({
+        where: { userId },
+        select: {
+          totalXp: true,
+          level: true,
         },
       });
     }

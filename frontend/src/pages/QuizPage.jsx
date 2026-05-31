@@ -220,7 +220,7 @@ const QuizPage = () => {
   const [cardKey, setCardKey] = useState(0);
   const timerRef = useRef(null);
 
-  const { updateUserStats, user } = useApp();
+  const { updateUserStats, user, refreshUser } = useApp();
 
   const initialStreakRef = useRef(null);
 
@@ -294,6 +294,7 @@ const QuizPage = () => {
       try {
         const result = await finishQuizSession(session.id);
         updateUserStats(result.userXp);
+        await refreshUser();
         navigate(`/quiz-result/${session.id}`, {
           state: {
             ...result,

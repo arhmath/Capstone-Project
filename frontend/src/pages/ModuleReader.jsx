@@ -143,7 +143,7 @@ const ModuleReader = () => {
   const [showSkipHint, setShowSkipHint] = useState(true);
   const contentRef = useRef(null);
 
-  const { updateUserStats, user } = useApp();
+  const { updateUserStats, user, refreshUser } = useApp();
   const { notifications, triggerNotifications, clearNotifications } = useNotifications();
 
   const streakShownDateRef = useRef(null);
@@ -252,6 +252,7 @@ const ModuleReader = () => {
           triggerNotifications(notifs);
           pendingNavigateRef.current = true;
         } else {
+          await refreshUser();
           navigate('/dashboard/quest-map');
         }
         return;

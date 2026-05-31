@@ -7,14 +7,15 @@ import {
   ChevronRight, Lock, LogOut
 } from 'lucide-react';
 import { getXpLogs } from '../services/xpLogService';
+import { getUserProgress, getUserAchievements } from '../services/progressService';
 
 const JENJANG_OPTIONS = ['SD', 'SMP', 'SMA'];
 
-const STAT_CARDS = (user) => [
+const STAT_CARDS = (user, totalAchievements) => [
   { label: 'Total XP', value: (user?.xp || 0).toLocaleString(), icon: <Star size={18} fill="currentColor" />, color: 'text-mq-orange', bg: 'bg-orange-50', border: 'border-orange-100' },
   { label: 'Level', value: user?.level || 1, icon: <Zap size={18} fill="currentColor" />, color: 'text-mq-primary', bg: 'bg-blue-50', border: 'border-blue-100' },
   { label: 'Streak', value: user?.streak || 0, icon: <Flame size={18} fill="currentColor" />, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100' },
-  { label: 'Pencapaian', value: `${user?.totalAchievements || 0} / 9`, icon: <Award size={18} />, color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-100' },
+  { label: 'Pencapaian', value: `${totalAchievements.unlocked} / ${totalAchievements.total}`, icon: <Award size={18} />, color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-100' },
 ];
 
 // ─── XP PROGRESS UTIL ────────────────────────────────────────────────────────
@@ -138,8 +139,12 @@ const AvatarPicker = ({ currentSeed, onSelect, onClose }) => (
   </div>
 );
 
+// ─── SKELETON LOADER ──────────────────────────────────────────────────────────
+const SkeletonBar = ({ className = '' }) => (
+  <div className={`animate-pulse bg-slate-100 rounded-full ${className}`} />
+);
+
 // ─── MAIN: PROFILE PAGE ───────────────────────────────────────────────────────
-// Menerima prop onLogout dari Dashboard
 const Profile = ({ onLogout }) => {
   const { user, setUser } = useApp();
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -148,6 +153,19 @@ const Profile = ({ onLogout }) => {
 
   const [activityLogs, setActivityLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
+
+  // ── STATE BARU: Progress & Achievements ──
+  const [progress, setProgress] = useState({
+    modulesCompleted: 0,
+    totalModules: 9,
+    achievementsUnlocked: 0,
+    totalAchievements: 9,
+    chaptersUnlocked: 0,
+    totalChapters: 3,
+  });
+  const [achievements, setAchievements] = useState([]);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+  const [loadingAchievements, setLoadingAchievements] = useState(true);
 
   const level = user?.level || 1;
   const xp = user?.xp || 0;
@@ -164,6 +182,7 @@ const Profile = ({ onLogout }) => {
     setUser(prev => ({ ...prev, foto: newFoto }));
   };
 
+  // ── FETCH XP LOGS ──
   useEffect(() => {
     const fetchXpLogs = async () => {
       try {
@@ -188,6 +207,57 @@ const Profile = ({ onLogout }) => {
     };
     fetchXpLogs();
   }, []);
+
+  // ── FETCH PROGRESS ──
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        setLoadingProgress(true);
+        const res = await getUserProgress();
+        setProgress({
+          modulesCompleted: res?.modulesCompleted ?? 0,
+          totalModules: res?.totalModules ?? 9,
+          achievementsUnlocked: res?.achievementsUnlocked ?? 0,
+          totalAchievements: res?.totalAchievements ?? 9,
+          chaptersUnlocked: res?.chaptersUnlocked ?? 0,
+          totalChapters: res?.totalChapters ?? 3,
+        });
+      } catch (error) {
+        console.error('Gagal mengambil progress:', error);
+      } finally {
+        setLoadingProgress(false);
+      }
+    };
+    fetchProgress();
+  }, []);
+
+  // ── FETCH ACHIEVEMENTS ──
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      try {
+        setLoadingAchievements(true);
+        const res = await getUserAchievements();
+        setAchievements(res?.achievements || []);
+      } catch (error) {
+        console.error('Gagal mengambil achievements:', error);
+      } finally {
+        setLoadingAchievements(false);
+      }
+    };
+    fetchAchievements();
+  }, []);
+
+  // Data untuk STAT_CARDS pakai data progress dari DB
+  const totalAchievements = {
+    unlocked: progress.achievementsUnlocked,
+    total: progress.totalAchievements,
+  };
+
+  // Data untuk Progress Quest pakai data dari DB
+  const QUEST_PROGRESS = [
+    { label: 'Modul Selesai',  value: progress.modulesCompleted,     max: progress.totalModules,      color: 'bg-mq-primary' },
+    { label: 'Achievement',    value: progress.achievementsUnlocked,  max: progress.totalAchievements, color: 'bg-yellow-400' },
+  ];
 
   return (
     <div className="animate-in fade-in duration-500 w-full">
@@ -255,9 +325,9 @@ const Profile = ({ onLogout }) => {
         {/* ── KOLOM KIRI ── */}
         <div className="lg:col-span-3 space-y-6">
 
-          {/* Stat Cards */}
+          {/* Stat Cards — pakai totalAchievements dari DB */}
           <div className="grid grid-cols-2 gap-3">
-            {STAT_CARDS(user).map((s, i) => (
+            {STAT_CARDS(user, totalAchievements).map((s, i) => (
               <div key={i} className={`${s.bg} border ${s.border} rounded-2xl p-4 flex items-center gap-3`}>
                 <div className={`w-10 h-10 bg-white rounded-xl flex items-center justify-center ${s.color} shadow-sm`}>
                   {s.icon}
@@ -299,8 +369,6 @@ const Profile = ({ onLogout }) => {
               />
             </div>
           </div>
-
-
         </div>
 
         {/* ── KOLOM KANAN ── */}
@@ -323,31 +391,39 @@ const Profile = ({ onLogout }) => {
             </div>
           </div>
 
-          {/* Progress Quest */}
+          {/* Progress Quest — data dari DB */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-2">
               <Target size={16} className="text-mq-primary" />
               <h3 className="font-black text-slate-800">Progress Quest</h3>
             </div>
             <div className="p-4 space-y-4">
-              {[
-                { label: 'Modul Selesai', value: 2, max: 9, color: 'bg-mq-primary' },
-                { label: 'Achievement',   value: 1, max: 9, color: 'bg-yellow-400' },
-                { label: 'Bab Terbuka',   value: 1, max: 3, color: 'bg-green-500'  },
-              ].map((item, i) => (
-                <div key={i}>
-                  <div className="flex justify-between text-xs font-bold mb-1.5">
-                    <span className="text-slate-600">{item.label}</span>
-                    <span className="text-slate-400">{item.value}/{item.max}</span>
+              {loadingProgress ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <SkeletonBar className="w-24 h-3" />
+                      <SkeletonBar className="w-8 h-3" />
+                    </div>
+                    <SkeletonBar className="w-full h-2.5 rounded-full" />
                   </div>
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${item.color} rounded-full transition-all duration-700`}
-                      style={{ width: `${Math.round((item.value / item.max) * 100)}%` }}
-                    />
+                ))
+              ) : (
+                QUEST_PROGRESS.map((item, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between text-xs font-bold mb-1.5">
+                      <span className="text-slate-600">{item.label}</span>
+                      <span className="text-slate-400">{item.value}/{item.max}</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${item.color} rounded-full transition-all duration-700`}
+                        style={{ width: `${Math.round((item.value / item.max) * 100)}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -383,7 +459,7 @@ const Profile = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* ── TOMBOL LOGOUT — tampil di mobile, di paling bawah halaman ── */}
+      {/* ── TOMBOL LOGOUT ── */}
       {onLogout && (
         <div className="lg:hidden mt-4 mb-2">
           <button

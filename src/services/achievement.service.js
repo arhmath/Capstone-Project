@@ -11,7 +11,6 @@ const grantAchievement = async (userId, achievementCode, tx) => {
 
     if (!achievement) return null;
 
-    // Cek sudah punya belum
     const already = await client.userAchievement.findUnique({
         where: { userId_achievementId: { userId, achievementId: achievement.id } },
         select: { id: true },
@@ -19,7 +18,6 @@ const grantAchievement = async (userId, achievementCode, tx) => {
 
     if (already) return null;
 
-    // Simpan achievement
     const earned = await client.userAchievement.create({
         data: { userId, achievementId: achievement.id },
         select: {
@@ -30,25 +28,19 @@ const grantAchievement = async (userId, achievementCode, tx) => {
         },
     });
 
-    const calculateLevel = (totalXp) => {
-        const level = Math.floor(totalXp / 100) + 1;
-        const xpToNextLevel = (level * 100) - totalXp;
-        return { level, xpToNextLevel };
-    };
-
-    // Grant XP reward jika ada
     if (achievement.xpReward > 0) {
-        const userXp = await client.userXp.upsert({
+        const updatedXp = await client.userXp.upsert({
             where: { userId },
             update: { totalXp: { increment: achievement.xpReward } },
             create: { userId, totalXp: achievement.xpReward },
         });
 
-        const { level, xpToNextLevel } = calculateLevel(userXp.totalXp);
+        const newLevel = Math.floor(updatedXp.totalXp / 100) + 1;
+        const newXpToNextLevel = (newLevel * 100) - updatedXp.totalXp;
 
         await client.userXp.update({
             where: { userId },
-            data: { level, xpToNextLevel },
+            data: { level: newLevel, xpToNextLevel: newXpToNextLevel }
         });
 
         await client.xpTransaction.create({
@@ -64,16 +56,13 @@ const grantAchievement = async (userId, achievementCode, tx) => {
     return earned;
 };
 
-// Cek semua achievement yang relevan, return list yang baru didapat
-const checkAchievements = async (userId, trigger, context = {}) => {
+const checkAchievements = async (userId, trigger, context = {}, tx = prisma) => {
     const newlyEarned = [];
-
-    // Jalankan checker sesuai trigger
     const checkers = triggerCheckers[trigger];
     if (!checkers) return newlyEarned;
 
     for (const checker of checkers) {
-        const result = await checker(userId, context);
+        const result = await checker(userId, context, tx);
         if (result) newlyEarned.push(result);
     }
 
@@ -81,106 +70,91 @@ const checkAchievements = async (userId, trigger, context = {}) => {
 };
 
 const triggerCheckers = {
-
-    // Dipanggil saat: user pertama kali login / register
     first_login: [
-        async (userId) => grantAchievement(userId, 'FIRST_LOGIN'),
+        async (userId, ctx, tx) => grantAchievement(userId, 'FIRST_LOGIN', tx),
     ],
-
-    // Dipanggil saat: finishSession pretest
     pretest_completed: [
-        async (userId) => grantAchievement(userId, 'PRETEST_DONE'),
+        async (userId, ctx, tx) => grantAchievement(userId, 'PRETEST_DONE', tx),
     ],
-
-    // Dipanggil saat: requestRecommendation berhasil
     recommendation_received: [
-        async (userId) => grantAchievement(userId, 'FIRST_RECOMMENDATION'),
+        async (userId, ctx, tx) => grantAchievement(userId, 'FIRST_RECOMMENDATION', tx),
     ],
-
-    // Dipanggil saat: finishSession quiz (jika isPassed)
     quiz_passed: [
-        async (userId) => {
-            // Cek apakah ini kuis pertama yang lulus
-            const passedCount = await prisma.quizSession.count({
+        async (userId, ctx, tx) => {
+            const passedCount = await tx.quizSession.count({
                 where: { userId, status: 'completed', totalScore: { gte: 70 } },
             });
-            if (passedCount >= 1) return grantAchievement(userId, 'QUIZ_FIRST_PASS');
+            if (passedCount >= 1) return grantAchievement(userId, 'QUIZ_FIRST_PASS', tx);
             return null;
         },
-        async (userId, { totalScore }) => {
-            if (totalScore === 100) return grantAchievement(userId, 'QUIZ_PERFECT');
+        async (userId, { totalScore }, tx) => {
+            if (totalScore === 100) return grantAchievement(userId, 'QUIZ_PERFECT', tx);
             return null;
         },
-        async (userId) => {
-            const passedCount = await prisma.quizSession.count({
+        async (userId, ctx, tx) => {
+            const passedCount = await tx.quizSession.count({
                 where: { userId, status: 'completed', totalScore: { gte: 70 } },
             });
-            if (passedCount >= 5) return grantAchievement(userId, 'QUIZ_5_PASS');
+            if (passedCount >= 5) return grantAchievement(userId, 'QUIZ_5_PASS', tx);
             return null;
         },
     ],
-
-    // Dipanggil saat: finishSession quiz trigger module completed
     module_completed: [
-        async (userId) => {
-            const count = await prisma.userModuleProgress.count({
+        async (userId, ctx, tx) => {
+            const count = await tx.userModuleProgress.count({
                 where: { userId, isCompleted: true },
             });
-            if (count >= 1) return grantAchievement(userId, 'MODULE_1');
+            if (count >= 1) return grantAchievement(userId, 'MODULE_1', tx);
             return null;
         },
-        async (userId) => {
-            const count = await prisma.userModuleProgress.count({
+        async (userId, ctx, tx) => {
+            const count = await tx.userModuleProgress.count({
                 where: { userId, isCompleted: true },
             });
-            if (count >= 5) return grantAchievement(userId, 'MODULE_5');
+            if (count >= 5) return grantAchievement(userId, 'MODULE_5', tx);
             return null;
         },
-        async (userId) => {
-            const count = await prisma.userModuleProgress.count({
+        async (userId, ctx, tx) => {
+            const count = await tx.userModuleProgress.count({
                 where: { userId, isCompleted: true },
             });
-            if (count >= 10) return grantAchievement(userId, 'MODULE_10');
+            if (count >= 10) return grantAchievement(userId, 'MODULE_10', tx);
             return null;
         },
     ],
-
-    // Dipanggil saat: update streak
     streak_updated: [
-        async (userId, { currentStreak }) => {
-            if (currentStreak >= 3) return grantAchievement(userId, 'STREAK_3');
+        async (userId, { currentStreak }, tx) => {
+            if (currentStreak >= 3) return grantAchievement(userId, 'STREAK_3', tx);
             return null;
         },
-        async (userId, { currentStreak }) => {
-            if (currentStreak >= 7) return grantAchievement(userId, 'STREAK_7');
+        async (userId, { currentStreak }, tx) => {
+            if (currentStreak >= 7) return grantAchievement(userId, 'STREAK_7', tx);
             return null;
         },
-        async (userId, { currentStreak }) => {
-            if (currentStreak >= 30) return grantAchievement(userId, 'STREAK_30');
+        async (userId, { currentStreak }, tx) => {
+            if (currentStreak >= 30) return grantAchievement(userId, 'STREAK_30', tx);
             return null;
         },
     ],
-
-    // Dipanggil saat: grantXp selesai
     xp_updated: [
-        async (userId, { totalXp }) => {
-            if (totalXp >= 500) return grantAchievement(userId, 'XP_500');
+        async (userId, { totalXp }, tx) => {
+            if (totalXp >= 500) return grantAchievement(userId, 'XP_500', tx);
             return null;
         },
-        async (userId, { totalXp }) => {
-            if (totalXp >= 1000) return grantAchievement(userId, 'XP_1000');
+        async (userId, { totalXp }, tx) => {
+            if (totalXp >= 1000) return grantAchievement(userId, 'XP_1000', tx);
             return null;
         },
-        async (userId, { totalXp }) => {
-            if (totalXp >= 5000) return grantAchievement(userId, 'XP_5000');
+        async (userId, { totalXp }, tx) => {
+            if (totalXp >= 5000) return grantAchievement(userId, 'XP_5000', tx);
             return null;
         },
-        async (userId, { level }) => {
-            if (level >= 5) return grantAchievement(userId, 'LEVEL_5');
+        async (userId, { level }, tx) => {
+            if (level >= 5) return grantAchievement(userId, 'LEVEL_5', tx);
             return null;
         },
-        async (userId, { level }) => {
-            if (level >= 10) return grantAchievement(userId, 'LEVEL_10');
+        async (userId, { level }, tx) => {
+            if (level >= 10) return grantAchievement(userId, 'LEVEL_10', tx);
             return null;
         },
     ],

@@ -233,14 +233,13 @@ const getModulePage = async (moduleId, pageNumber) => {
 // PUT /api/modules/:id/progress
 const updateProgress = async (moduleId, userId, lastPage) => {
     const pageNum = parseInt(lastPage, 10);
-
     if (isNaN(pageNum)) {
         const err = new Error('Nomor halaman tidak valid');
         err.status = 400;
         throw err;
     }
-    
-    const module = await prisma.module.findUnique({
+
+    const moduleData = await prisma.module.findUnique({
         where: { id: moduleId },
         select: {
             id: true,
@@ -250,14 +249,13 @@ const updateProgress = async (moduleId, userId, lastPage) => {
         },
     });
 
-    if (!module || !module.isPublished) {
+    if (!moduleData || !moduleData.isPublished) {
         const err = new Error('Modul tidak ditemukan');
         err.status = 404;
         throw err;
     }
 
-    const totalPages = module._count.pages;
-
+    const totalPages = moduleData._count.pages;
     if (pageNum < 1 || pageNum > totalPages) {
         const err = new Error(`Nomor halaman tidak valid. Harus antara 1 dan ${totalPages}`);
         err.status = 400;
@@ -265,18 +263,11 @@ const updateProgress = async (moduleId, userId, lastPage) => {
     }
 
     const existingProgress = await prisma.userModuleProgress.findUnique({
-        where: {
-            userId_moduleId: {
-                userId,
-                moduleId,
-            },
-        },
+        where: { userId_moduleId: { userId, moduleId } },
     });
 
     const justCompleted = !existingProgress?.isCompleted && pageNum === totalPages;
-    const isCompleted =
-        existingProgress?.isCompleted ||
-        pageNum === totalPages;
+    const isCompleted = existingProgress?.isCompleted || pageNum === totalPages;
 
     const result = await prisma.$transaction(async (tx) => {
         const progress = await tx.userModuleProgress.upsert({
@@ -284,10 +275,7 @@ const updateProgress = async (moduleId, userId, lastPage) => {
             update: {
                 lastPage: pageNum,
                 isCompleted,
-                completedAt:
-                    isCompleted && !existingProgress?.completedAt
-                        ? new Date()
-                        : existingProgress?.completedAt,
+                completedAt: isCompleted && !existingProgress?.completedAt ? new Date() : existingProgress?.completedAt,
             },
             create: {
                 userId,
@@ -296,78 +284,45 @@ const updateProgress = async (moduleId, userId, lastPage) => {
                 isCompleted,
                 completedAt: isCompleted ? new Date() : null,
             },
-            select: {
-                moduleId: true,
-                lastPage: true,
-                isCompleted: true,
-                xpEarned: true,
-                startedAt: true,
-                completedAt: true,
-            },
+            select: { moduleId: true, lastPage: true, isCompleted: true, xpEarned: true, startedAt: true, completedAt: true },
         });
 
         let xpResult = null;
-
-        if (justCompleted && module.xpReward > 0) {
-            xpResult = await grantXp(userId, module.xpReward, 'module', moduleId, tx);
+        if (justCompleted && moduleData.xpReward > 0) {
+            xpResult = await grantXp(userId, moduleData.xpReward, 'module', moduleId, tx);
 
             await tx.userModuleProgress.update({
                 where: { userId_moduleId: { userId, moduleId } },
-                data: { xpEarned: module.xpReward },
+                data: { xpEarned: moduleData.xpReward },
             });
         }
 
         const { streak, newAchievements: streakAch } = await updateUserStreak(userId, tx);
 
         return { progress, xpResult, streak, streakAch };
-    });
+    }, { timeout: 10000 });
 
     const notifications = [];
-
     if (result.xpResult?.xpGained) {
-        notifications.push({
-            type: 'xp_gained',
-            xpGained: result.xpResult.xpGained,
-            totalXp: result.xpResult.totalXp,
-        });
+        notifications.push({ type: 'xp_gained', xpGained: result.xpResult.xpGained, totalXp: result.xpResult.totalXp });
     }
-
     if (result.xpResult?.leveledUp) {
-        notifications.push({
-            type: 'level_up',
-            levelBefore: result.xpResult.levelBefore,
-            levelNow: result.xpResult.level,
-        });
+        notifications.push({ type: 'level_up', levelBefore: result.xpResult.levelBefore, levelNow: result.xpResult.level });
     }
-
     if (result.xpResult?.newAchievements?.length > 0) {
-        notifications.push(
-            ...result.xpResult.newAchievements.map((a) => ({
-                type: 'achievement',
-                ...a,
-            }))
-        );
+        notifications.push(...result.xpResult.newAchievements.map((a) => ({ type: 'achievement', ...a })));
     }
-
     if (result.streak) {
-        notifications.push({
-            type: 'streak_updated',
-            currentStreak: result.streak.currentStreak,
-        });
+        notifications.push({ type: 'streak_updated', currentStreak: result.streak.currentStreak });
     }
-
     if (result.streakAch?.length > 0) {
-        notifications.push(
-            ...result.streakAch.map((a) => ({ type: 'achievement', ...a }))
-        );
+        notifications.push(...result.streakAch.map((a) => ({ type: 'achievement', ...a })));
     }
 
     if (justCompleted) {
-        const moduleAch = await checkAchievements(userId, 'module_completed');
+        const moduleAch = await checkAchievements(userId, 'module_completed', {}, prisma);
         if (moduleAch.length > 0) {
-            notifications.push(
-                ...moduleAch.map((a) => ({ type: 'achievement', ...a }))
-            );
+            notifications.push(...moduleAch.map((a) => ({ type: 'achievement', ...a })));
         }
     }
 

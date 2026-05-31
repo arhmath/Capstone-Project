@@ -388,13 +388,7 @@ const submitAnswer = async (
 const finishSession = async (sessionId, userId) => {
   const session = await prisma.quizSession.findUnique({
     where: { id: sessionId },
-    select: {
-      id: true,
-      userId: true,
-      quizId: true,
-      status: true,
-      startedAt: true,
-    },
+    select: { id: true, userId: true, quizId: true, status: true, startedAt: true },
   });
 
   if (!session) {
@@ -415,14 +409,9 @@ const finishSession = async (sessionId, userId) => {
     throw err;
   }
 
-  // Ambil semua jawaban
   const answers = await prisma.quizAnswer.findMany({
     where: { sessionId },
-    select: {
-      isCorrect: true,
-      xpEarned: true,
-      timeTakenSeconds: true,
-    },
+    select: { isCorrect: true, xpEarned: true, timeTakenSeconds: true },
   });
 
   if (answers.length === 0) {
@@ -431,55 +420,37 @@ const finishSession = async (sessionId, userId) => {
     throw err;
   }
 
-  // Ambil info quiz (untuk passingScore & maxXp & moduleId)
   const quiz = await prisma.quiz.findUnique({
     where: { id: session.quizId },
-    select: {
-      passingScore: true,
-      maxXp: true,
-      moduleId: true,
-    },
+    select: { passingScore: true, maxXp: true, moduleId: true },
   });
 
-  // Hitung statistik
   const totalCorrect = answers.filter((a) => a.isCorrect).length;
   const totalScore = Math.round((totalCorrect / answers.length) * 100);
   const totalXpFromQuiz = answers.reduce((sum, a) => sum + a.xpEarned, 0);
   const totalDuration = answers.reduce((sum, a) => sum + a.timeTakenSeconds, 0);
   const isPassed = totalScore >= quiz.passingScore;
 
-  // XP bonus dari modul jika lulus (ambil dari quiz.maxXp)
   const moduleBonusXp = isPassed ? quiz.maxXp : 0;
-  const totalXpEarned = totalXpFromQuiz + moduleBonusXp;
+  const totalXpToGrant = totalXpFromQuiz + moduleBonusXp;
 
-  // Jalankan dalam transaksi
   const result = await prisma.$transaction(async (tx) => {
-    // Update sesi jadi completed
     const completed = await tx.quizSession.update({
       where: { id: sessionId },
       data: {
         status: 'completed',
         totalScore,
-        totalXpEarned,
+        totalXpEarned: totalXpToGrant,
         durationSeconds: totalDuration,
         completedAt: new Date(),
       },
       select: {
-        id: true,
-        quizId: true,
-        totalScore: true,
-        totalXpEarned: true,
-        durationSeconds: true,
-        status: true,
-        startedAt: true,
-        completedAt: true,
+        id: true, quizId: true, totalScore: true, totalXpEarned: true,
+        durationSeconds: true, status: true, startedAt: true, completedAt: true,
       },
     });
 
     let userXpResult = null;
-
-    const totalXpToGrant = totalXpFromQuiz + moduleBonusXp;
-
     if (totalXpToGrant > 0) {
       userXpResult = await grantXp(userId, totalXpToGrant, 'quiz', sessionId, tx);
     }
@@ -487,18 +458,8 @@ const finishSession = async (sessionId, userId) => {
     if (moduleBonusXp > 0) {
       await tx.userModuleProgress.upsert({
         where: { userId_moduleId: { userId, moduleId: quiz.moduleId } },
-        update: {
-          isCompleted: true,
-          xpEarned: moduleBonusXp,
-          completedAt: new Date(),
-        },
-        create: {
-          userId,
-          moduleId: quiz.moduleId,
-          isCompleted: true,
-          xpEarned: moduleBonusXp,
-          completedAt: new Date(),
-        },
+        update: { isCompleted: true, xpEarned: moduleBonusXp, completedAt: new Date() },
+        create: { userId, moduleId: quiz.moduleId, isCompleted: true, xpEarned: moduleBonusXp, completedAt: new Date() },
       });
     }
 
@@ -513,71 +474,39 @@ const finishSession = async (sessionId, userId) => {
 
     return { completed, userXpResult, streak, streakAch };
   }, {
-    timeout: 25000, 
+    timeout: 10000,
   });
 
-  const notifications = [];
-
-  // XP gained
-  if (result.userXpResult?.xpGained) {
-    notifications.push({
-      type: 'xp_gained',
-      xpGained: result.userXpResult.xpGained,
-      totalXp: result.userXpResult.totalXp,
-    });
-  }
-
-  // Level up
-  if (result.userXpResult?.leveledUp) {
-    notifications.push({
-      type: 'level_up',
-      levelBefore: result.userXpResult.levelBefore,
-      levelNow: result.userXpResult.level,
-    });
-  }
-
-  // Achievement dari XP (sudah dijalankan di dalam grantXp)
-  if (result.userXpResult?.newAchievements?.length > 0) {
-    notifications.push(
-      ...result.userXpResult.newAchievements.map((a) => ({
-        type: 'achievement',
-        ...a,
-      }))
-    );
-  }
-
-  // Streak bertambah
-  if (result.streak) {
-    notifications.push({
-      type: 'streak_updated',
-      currentStreak: result.streak.currentStreak,
-    });
-  }
-
-  // Achievement dari streak
-  if (result.streakAch?.length > 0) {
-    notifications.push(
-      ...result.streakAch.map((a) => ({ type: 'achievement', ...a }))
-    );
-  }
-
-  // Achievement quiz & modul (di luar transaksi — baca data yang sudah committed)
   const extraAchievements = [];
-
   if (isPassed) {
-    const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore });
+    const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore }, prisma);
     extraAchievements.push(...quizAch);
   }
 
   if (moduleBonusXp > 0) {
-    const moduleAch = await checkAchievements(userId, 'module_completed');
+    const moduleAch = await checkAchievements(userId, 'module_completed', {}, prisma);
     extraAchievements.push(...moduleAch);
   }
 
+  // Bungkus semua notifikasi
+  const notifications = [];
+  if (result.userXpResult?.xpGained) {
+    notifications.push({ type: 'xp_gained', xpGained: result.userXpResult.xpGained, totalXp: result.userXpResult.totalXp });
+  }
+  if (result.userXpResult?.leveledUp) {
+    notifications.push({ type: 'level_up', levelBefore: result.userXpResult.levelBefore, levelNow: result.userXpResult.level });
+  }
+  if (result.userXpResult?.newAchievements?.length > 0) {
+    notifications.push(...result.userXpResult.newAchievements.map((a) => ({ type: 'achievement', ...a })));
+  }
+  if (result.streak) {
+    notifications.push({ type: 'streak_updated', currentStreak: result.streak.currentStreak });
+  }
+  if (result.streakAch?.length > 0) {
+    notifications.push(...result.streakAch.map((a) => ({ type: 'achievement', ...a })));
+  }
   if (extraAchievements.length > 0) {
-    notifications.push(
-      ...extraAchievements.map((a) => ({ type: 'achievement', ...a }))
-    );
+    notifications.push(...extraAchievements.map((a) => ({ type: 'achievement', ...a })));
   }
 
   return {

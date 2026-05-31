@@ -19,7 +19,8 @@ const grantXp = async (userId, xpAmount, sourceType, sourceId, tx = prisma) => {
         create: { userId, totalXp: xpAmount },
     });
 
-    const { level, xpToNextLevel } = calculateLevel(updated.totalXp);
+    const level = Math.floor(updated.totalXp / 100) + 1;
+    const xpToNextLevel = (level * 100) - updated.totalXp;
 
     await client.userXp.update({
         where: { userId },
@@ -35,7 +36,7 @@ const grantXp = async (userId, xpAmount, sourceType, sourceId, tx = prisma) => {
     const newAchievements = await checkAchievements(userId, 'xp_updated', {
         totalXp: updated.totalXp,
         level,
-    });
+    }, client);
 
     return {
         xpGained: xpAmount,

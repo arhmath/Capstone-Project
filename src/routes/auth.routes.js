@@ -33,13 +33,23 @@ const loginRules = [
     .notEmpty().withMessage('Password wajib diisi'),
 ];
 
+const updateProfileRules = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 }).withMessage('Nama harus 2–100 karakter'),
+  body('avatarUrl')
+    .optional()
+    .isURL().withMessage('URL avatar tidak valid'),
+];
 
-// Public routes (tidak butuh token)
+// Public routes
 router.post('/register', validate(registerRules), authController.register);
 router.post('/login',    validate(loginRules),    authController.login);
 
-// Protected routes (butuh token — authenticate middleware wajib)
-router.get('/me',     authenticate, authController.me);
+// Protected routes
+router.get('/me',      authenticate, authController.me);
 router.post('/logout', authenticate, authController.logout);
+router.patch('/profile', authenticate, validate(updateProfileRules), authController.updateProfile);
 
 module.exports = router;

@@ -13,20 +13,16 @@ const isEmailTaken = async (email) => {
 const createUser = async ({ name, email, password }) => {
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Prisma transaction: semua query dijalankan sekaligus
   const user = await prisma.$transaction(async (tx) => {
-    // 1. Buat user
     const newUser = await tx.user.create({
       data: { name, email, passwordHash },
       select: { id: true, name: true, email: true, avatarUrl: true },
     });
 
-    // 2. Init tabel user_xp (untuk track XP & level)
     await tx.userXp.create({
       data: { userId: newUser.id },
     });
 
-    // 3. Init tabel user_streaks (untuk track streak harian)
     await tx.userStreak.create({
       data: {
         userId: newUser.id,
@@ -41,7 +37,6 @@ const createUser = async ({ name, email, password }) => {
 };
 
 const verifyCredentials = async (email, password) => {
-  // Ambil user beserta passwordHash — field ini tidak di-select di tempat lain
   const user = await prisma.user.findUnique({
     where: { email },
     select: {
@@ -59,17 +54,12 @@ const verifyCredentials = async (email, password) => {
     },
   });
 
-  // User tidak ada
   if (!user) return null;
-
-  // User daftar via Google/school — tidak punya password
   if (!user.passwordHash) return null;
 
-  // Compare password
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) return null;
 
-  // Update last_login_at (fire and forget — tidak perlu await)
   prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
@@ -77,7 +67,6 @@ const verifyCredentials = async (email, password) => {
 
   const newAchievements = await checkAchievements(user.id, 'first_login');
 
-  // Hapus passwordHash dari return value — jangan pernah kirim ke client
   const { passwordHash, ...safeUser } = user;
   return safeUser;
 };
@@ -92,7 +81,6 @@ const getUserById = async (userId) => {
       avatarUrl: true,
       authProvider: true,
       createdAt: true,
-      // Sertakan data XP dan jenjang aktif
       userXp: {
         select: { totalXp: true, level: true, xpToNextLevel: true },
       },
@@ -129,8 +117,6 @@ const getUserById = async (userId) => {
       totalXp: {
         gt: totalXp,
       },
-
-      // hanya user yg punya education level
       user: {
         userEducationLevels: {
           some: {},
@@ -141,9 +127,26 @@ const getUserById = async (userId) => {
 
   return {
     ...user,
-
     leaderboardRank: countAboveMe + 1,
   };
 };
 
-module.exports = { isEmailTaken, createUser, verifyCredentials, getUserById };
+// ── BARU: Update nama & avatar ──
+const updateProfile = async (userId, { name, avatarUrl }) => {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(name      && { name }),
+      ...(avatarUrl && { avatarUrl }),
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+    },
+  });
+  return updated;
+};
+
+module.exports = { isEmailTaken, createUser, verifyCredentials, getUserById, updateProfile };

@@ -1,5 +1,7 @@
 const prisma = require('../config/prisma');
 const { updateUserStreak } = require('./streak.service');
+const { checkAchievements } = require('./achievement.service');
+const { grantXp } = require('./xp.service');
 
 const getModules = async (userId) => {
     // 1. Ambil jenjang dari profil user yang login
@@ -237,12 +239,13 @@ const updateProgress = async (moduleId, userId, lastPage) => {
         err.status = 400;
         throw err;
     }
-
+    
     const module = await prisma.module.findUnique({
         where: { id: moduleId },
         select: {
             id: true,
             isPublished: true,
+            xpReward: true,
             _count: { select: { pages: true } },
         },
     });
@@ -270,39 +273,109 @@ const updateProgress = async (moduleId, userId, lastPage) => {
         },
     });
 
+    const justCompleted = !existingProgress?.isCompleted && pageNum === totalPages;
     const isCompleted =
         existingProgress?.isCompleted ||
         pageNum === totalPages;
 
-    const progress = await prisma.userModuleProgress.upsert({
-        where: { userId_moduleId: { userId, moduleId } },
-        update: {
-            lastPage: pageNum,
-            isCompleted: isCompleted,
-            completedAt: isCompleted && !existingProgress?.completedAt
-                ? new Date()
-                : existingProgress?.completedAt,
-        },
-        create: {
-            userId,
-            moduleId,
-            lastPage: pageNum,
-            isCompleted,
-            completedAt: isCompleted ? new Date() : null,
-        },
-        select: {
-            moduleId: true,
-            lastPage: true,
-            isCompleted: true,
-            xpEarned: true,
-            startedAt: true,
-            completedAt: true,
-        },
+    const result = await prisma.$transaction(async (tx) => {
+        const progress = await tx.userModuleProgress.upsert({
+            where: { userId_moduleId: { userId, moduleId } },
+            update: {
+                lastPage: pageNum,
+                isCompleted,
+                completedAt:
+                    isCompleted && !existingProgress?.completedAt
+                        ? new Date()
+                        : existingProgress?.completedAt,
+            },
+            create: {
+                userId,
+                moduleId,
+                lastPage: pageNum,
+                isCompleted,
+                completedAt: isCompleted ? new Date() : null,
+            },
+            select: {
+                moduleId: true,
+                lastPage: true,
+                isCompleted: true,
+                xpEarned: true,
+                startedAt: true,
+                completedAt: true,
+            },
+        });
+
+        let xpResult = null;
+
+        if (justCompleted && module.xpReward > 0) {
+            xpResult = await grantXp(userId, module.xpReward, 'module', moduleId, tx);
+
+            await tx.userModuleProgress.update({
+                where: { userId_moduleId: { userId, moduleId } },
+                data: { xpEarned: module.xpReward },
+            });
+        }
+
+        const { streak, newAchievements: streakAch } = await updateUserStreak(userId, tx);
+
+        return { progress, xpResult, streak, streakAch };
     });
 
-    await updateUserStreak(userId);
+    const notifications = [];
 
-    return { ...progress, totalPages };
+    if (result.xpResult?.xpGained) {
+        notifications.push({
+            type: 'xp_gained',
+            xpGained: result.xpResult.xpGained,
+            totalXp: result.xpResult.totalXp,
+        });
+    }
+
+    if (result.xpResult?.leveledUp) {
+        notifications.push({
+            type: 'level_up',
+            levelBefore: result.xpResult.levelBefore,
+            levelNow: result.xpResult.level,
+        });
+    }
+
+    if (result.xpResult?.newAchievements?.length > 0) {
+        notifications.push(
+            ...result.xpResult.newAchievements.map((a) => ({
+                type: 'achievement',
+                ...a,
+            }))
+        );
+    }
+
+    if (result.streak) {
+        notifications.push({
+            type: 'streak_updated',
+            currentStreak: result.streak.currentStreak,
+        });
+    }
+
+    if (result.streakAch?.length > 0) {
+        notifications.push(
+            ...result.streakAch.map((a) => ({ type: 'achievement', ...a }))
+        );
+    }
+
+    if (justCompleted) {
+        const moduleAch = await checkAchievements(userId, 'module_completed');
+        if (moduleAch.length > 0) {
+            notifications.push(
+                ...moduleAch.map((a) => ({ type: 'achievement', ...a }))
+            );
+        }
+    }
+
+    return {
+        ...result.progress,
+        totalPages,
+        notifications,
+    };
 };
 
 module.exports = { getModules, getModuleById, getModulePage, updateProgress };

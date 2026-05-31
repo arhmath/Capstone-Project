@@ -1,49 +1,13 @@
 const prisma = require('../config/prisma');
 const { updateUserStreak } = require('./streak.service');
 const { checkAchievements } = require('./achievement.service');
+const { grantXp } = require('./xp.service');
 
 // Helper: hitung XP per soal berdasarkan waktu menjawab
 const calculateQuestionXp = (baseXp, timeLimitSeconds, timeTakenSeconds) => {
   if (timeTakenSeconds >= timeLimitSeconds) return Math.floor(baseXp * 0.5);
   const timeBonus = 1 - timeTakenSeconds / timeLimitSeconds;
   return Math.floor(baseXp * (0.5 + 0.5 * timeBonus));
-};
-
-// Helper: hitung level dari total XP
-const calculateLevel = (totalXp) => {
-  const level = Math.floor(totalXp / 100) + 1;
-  const xpToNextLevel = (level * 100) - totalXp;
-  return { level, xpToNextLevel };
-};
-
-// Helper: tambah XP ke user (update UserXp + insert XpTransaction)
-const grantXp = async (userId, xpAmount, sourceType, sourceId, tx) => {
-  const client = tx ?? prisma;
-
-  const userXp = await client.userXp.upsert({
-    where: { userId },
-    update: { totalXp: { increment: xpAmount } },
-    create: { userId, totalXp: xpAmount },
-    select: { totalXp: true },
-  });
-
-  const { level, xpToNextLevel } = calculateLevel(userXp.totalXp);
-
-  await client.userXp.update({
-    where: { userId },
-    data: { level, xpToNextLevel },
-  });
-
-  await client.xpTransaction.create({
-    data: {
-      userId,
-      xpAmount,
-      sourceType,
-      sourceId,
-    },
-  });
-
-  return { totalXp: userXp.totalXp, level, xpToNextLevel };
 };
 
 // 1. GET QUIZ — diambil saat POST /sessions (bukan endpoint terpisah)
@@ -512,21 +476,21 @@ const finishSession = async (sessionId, userId) => {
       },
     });
 
-    // Grant XP dari soal
     let userXpResult = null;
-    if (totalXpFromQuiz > 0) {
-      userXpResult = await grantXp(userId, totalXpFromQuiz, 'quiz', sessionId, tx);
+
+    const totalXpToGrant = totalXpFromQuiz + moduleBonusXp;
+
+    if (totalXpToGrant > 0) {
+      userXpResult = await grantXp(userId, totalXpToGrant, 'quiz', sessionId, tx);
     }
 
-    // Grant XP bonus modul jika lulus
     if (moduleBonusXp > 0) {
-      userXpResult = await grantXp(userId, moduleBonusXp, 'module', session.quizId, tx);
-
-      // Update module progress jadi completed
       await tx.userModuleProgress.upsert({
         where: { userId_moduleId: { userId, moduleId: quiz.moduleId } },
         update: {
+          isCompleted: true,
           xpEarned: moduleBonusXp,
+          completedAt: new Date(),
         },
         create: {
           userId,
@@ -536,42 +500,85 @@ const finishSession = async (sessionId, userId) => {
           completedAt: new Date(),
         },
       });
-
-
     }
 
     if (!userXpResult) {
       userXpResult = await tx.userXp.findUnique({
         where: { userId },
-        select: {
-          totalXp: true,
-          level: true,
-        },
+        select: { totalXp: true, level: true },
       });
     }
 
-    await updateUserStreak(userId);
+    const { streak, newAchievements: streakAch } = await updateUserStreak(userId, tx);
 
-    return { completed, userXpResult };
+    return { completed, userXpResult, streak, streakAch };
+  }, {
+    timeout: 25000, 
   });
 
-  const newAchievements = [];
+  const notifications = [];
+
+  // XP gained
+  if (result.userXpResult?.xpGained) {
+    notifications.push({
+      type: 'xp_gained',
+      xpGained: result.userXpResult.xpGained,
+      totalXp: result.userXpResult.totalXp,
+    });
+  }
+
+  // Level up
+  if (result.userXpResult?.leveledUp) {
+    notifications.push({
+      type: 'level_up',
+      levelBefore: result.userXpResult.levelBefore,
+      levelNow: result.userXpResult.level,
+    });
+  }
+
+  // Achievement dari XP (sudah dijalankan di dalam grantXp)
+  if (result.userXpResult?.newAchievements?.length > 0) {
+    notifications.push(
+      ...result.userXpResult.newAchievements.map((a) => ({
+        type: 'achievement',
+        ...a,
+      }))
+    );
+  }
+
+  // Streak bertambah
+  if (result.streak) {
+    notifications.push({
+      type: 'streak_updated',
+      currentStreak: result.streak.currentStreak,
+    });
+  }
+
+  // Achievement dari streak
+  if (result.streakAch?.length > 0) {
+    notifications.push(
+      ...result.streakAch.map((a) => ({ type: 'achievement', ...a }))
+    );
+  }
+
+  // Achievement quiz & modul (di luar transaksi — baca data yang sudah committed)
+  const extraAchievements = [];
 
   if (isPassed) {
     const quizAch = await checkAchievements(userId, 'quiz_passed', { totalScore });
-    newAchievements.push(...quizAch);
+    extraAchievements.push(...quizAch);
   }
 
   if (moduleBonusXp > 0) {
     const moduleAch = await checkAchievements(userId, 'module_completed');
-    newAchievements.push(...moduleAch);
+    extraAchievements.push(...moduleAch);
   }
 
-  const xpAch = await checkAchievements(userId, 'xp_updated', {
-    totalXp: result.userXpResult.totalXp,
-    level: result.userXpResult.level,
-  });
-  newAchievements.push(...xpAch);
+  if (extraAchievements.length > 0) {
+    notifications.push(
+      ...extraAchievements.map((a) => ({ type: 'achievement', ...a }))
+    );
+  }
 
   return {
     ...result.completed,
@@ -581,7 +588,7 @@ const finishSession = async (sessionId, userId) => {
     moduleBonusXp,
     isPassed,
     userXp: result.userXpResult,
-    achievementsEarned: newAchievements,
+    notifications,
   };
 };
 

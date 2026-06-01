@@ -1,9 +1,4 @@
-const BASE_URL = 'http://localhost:5000/api';
-
-const authHeader = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('mq_token')}`,
-});
+import { apiFetch, authHeader, BASE_URL } from './api';
 
 export const getUserProgress = async () => {
   const res = await fetch(`${BASE_URL}/user/progress`, {

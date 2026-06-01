@@ -8,6 +8,23 @@ const getUserProgress = async (userId) => {
         },
     });
 
+    const completedSessions = await prisma.quizSession.findMany({
+        where: {
+            userId,
+            status: 'completed',
+        },
+        select: {
+            quiz: {
+                select: {
+                    moduleId: true,
+                },
+            },
+        },
+    });
+
+    const completedQuizModuleIds = [
+        ...new Set(completedSessions.map((session) => session.quiz?.moduleId).filter(Boolean))
+    ];
     const [
         modulesCompleted,
         totalModules,
@@ -17,12 +34,13 @@ const getUserProgress = async (userId) => {
         totalChapters,
     ] = await Promise.all([
         prisma.userModuleProgress.count({
-            where: { userId, isCompleted: true },
+            where: { userId, isCompleted: true, moduleId: { in: completedQuizModuleIds } },
         }),
 
         prisma.module.count({
             where: {
                 educationLevel: user.userEducationLevels[0].educationLevel,
+                isPublished: true,
             },
         }),
 

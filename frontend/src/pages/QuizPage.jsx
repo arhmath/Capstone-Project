@@ -6,8 +6,8 @@ import {
   finishQuizSession,
 } from '../services/quizService';
 import { CheckCircle2, XCircle, Loader2, Brain, Star, Zap, Clock } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E'];
 
 const COLORS = {
@@ -20,7 +20,6 @@ const COLORS = {
   yellow: '#FFD700',
 };
 
-// ─── Confetti ──────────────────────────────────────────────────────────────────
 const ConfettiPiece = ({ style }) => (
   <div className="absolute top-0 pointer-events-none" style={style} />
 );
@@ -47,7 +46,6 @@ const Confetti = ({ active }) => {
   );
 };
 
-// ─── Circular Timer ────────────────────────────────────────────────────────────
 const CircularTimer = ({ elapsed, limit }) => {
   if (!limit) return null;
   const pct = Math.min(elapsed / limit, 1);
@@ -198,7 +196,7 @@ const FeedbackBar = ({ result, onNext, isLast, submitting }) => {
           boxShadow: correct ? `0 4px 0 ${COLORS.greenDark}` : `0 4px 0 ${COLORS.blueDark}`,
         }}
       >
-        {submitting ? <Loader2 size={18} className="animate-spin" /> : isLast ? ' Selesaikan Quiz' : 'Lanjut →'}
+        {submitting ? <Loader2 size={18} className="animate-spin" /> : isLast ? ' Selesaikan Quiz' : 'Lanjut'}
       </button>
     </div>
   );
@@ -221,6 +219,27 @@ const QuizPage = () => {
   const [showXp, setShowXp] = useState(false);
   const [cardKey, setCardKey] = useState(0);
   const timerRef = useRef(null);
+
+  const { updateUserStats, user, refreshUser } = useApp();
+
+  const initialStreakRef = useRef(null);
+
+  useEffect(() => {
+    initialStreakRef.current = user?.streak ?? 0;
+  }, []);
+
+  const filterNotifs = useCallback((notifList = []) => {
+    return notifList.filter(n => {
+      if (n.type === 'streak_updated') {
+        if (!n.currentStreak || n.currentStreak <= 0) return false;
+        if (n.currentStreak <= initialStreakRef.current) return false;
+        return true;
+      }
+      return true;
+    });
+  }, []);
+
+  const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
     const startQuiz = async () => {
@@ -271,11 +290,21 @@ const QuizPage = () => {
 
   const handleNext = async () => {
     if (currentIndex === quiz.questions.length - 1) {
+      setFinishing(true);
       try {
         const result = await finishQuizSession(session.id);
-        navigate(`/quiz-result/${session.id}`, { state: result });
+        updateUserStats(result.userXp);
+        await refreshUser();
+        navigate(`/quiz-result/${session.id}`, {
+          state: {
+            ...result,
+            pendingNotifications: filterNotifs(result.notifications ?? []),
+          }
+        });
       } catch (err) {
         console.error(err);
+      } finally {
+        setFinishing(false);
       }
       return;
     }
@@ -452,7 +481,7 @@ const QuizPage = () => {
                 result={answerResult}
                 onNext={handleNext}
                 isLast={isLast}
-                submitting={submitting}
+                submitting={submitting || finishing}
               />
             )}
           </div>

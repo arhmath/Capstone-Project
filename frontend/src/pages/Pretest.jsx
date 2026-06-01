@@ -12,6 +12,7 @@ import {
 import {
   getOrRequestRecommendation,
 } from '../services/recommendationService';
+import { useApp } from '../contexts/AppContext';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,10 @@ const normaliseOpt = (opt) => ({
   text: opt.optionText ?? opt.text ?? String(opt),
 });
 
+const formatTopic = (topic) =>
+  topic
+    ?.replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 /**
  * apiFetch bisa mengembalikan response dalam berbagai bentuk:
  *   { success, data: { ... } }   ← envelope
@@ -132,6 +137,8 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
   const [recommendationError, setRecommendationError] = useState(null);
   const [hasRequestedRecommendation, setHasRequestedRecommendation] = useState(false);
 
+  const { refreshUser } = useApp();
+
   // Backend fields: totalCorrect, totalAnswers
   const total = result.totalAnswers ?? questions.length;
   const correctCount = result.totalCorrect ?? 0;
@@ -159,6 +166,7 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
 
       setRecommendations(recs);
       setHasRequestedRecommendation(true);
+      await refreshUser();
     } catch (err) {
       console.error(err);
       setRecommendationError(
@@ -237,7 +245,7 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
                       </div>
                       {q.topic && (
                         <span className="text-[10px] font-black px-2 py-1 rounded-lg flex-shrink-0" style={{ background: `${meta.color}15`, color: meta.color }}>
-                          {q.topic}
+                          {formatTopic(q.topic)}
                         </span>
                       )}
                     </div>
@@ -334,7 +342,7 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
 
                               {moduleData.topic && (
                                 <span className="text-xs font-black px-3 py-1 rounded-xl bg-slate-100 text-slate-600">
-                                  📘 {moduleData.topic}
+                                  📘 {formatTopic(moduleData.topic)}
                                 </span>
                               )}
 
@@ -390,6 +398,8 @@ const PreTest = () => {
 
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState(null);
+
+  const { refreshUser } = useApp();
 
   const questionStartRef = useRef(Date.now());
 
@@ -481,6 +491,7 @@ const PreTest = () => {
       // { id, educationLevel, totalScore, totalAnswers, totalCorrect, topicScores, ... }
       const raw = await finishPretestSession(sessionId);
       setResult(unwrap(raw));
+      await refreshUser();
     } catch (err) {
       console.error('finishPretestSession error:', err);
       // Fallback hitung di FE
@@ -542,7 +553,7 @@ const PreTest = () => {
             {q.emoji && <span className="text-lg">{q.emoji}</span>}
             {q.topic && (
               <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full" style={{ background: `${meta.color}15`, color: meta.color }}>
-                {q.topic}
+                {formatTopic(q.topic)}
               </span>
             )}
           </div>
@@ -583,7 +594,7 @@ const PreTest = () => {
                 </p>
                 <p className="text-xs text-slate-500 font-semibold leading-relaxed">
                   {pickedCorrect
-                    ? `Kamu menguasai topik ${q.topic ?? 'ini'} dengan baik!`
+                    ? `Kamu menguasai topik ${formatTopic(q.topic) ?? 'ini'} dengan baik!`
                     : lastAnswer?.correctOptionText
                       ? `Jawaban yang benar adalah "${lastAnswer.correctOptionText}". Pelajari lagi yuk!`
                       : 'Pelajari lagi materi ini yuk!'

@@ -190,13 +190,7 @@ const PilihJenjang = () => {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-wider text-white"
                   style={{ backgroundColor: selected.color }}
                 >
-                  {selected.classIcon} CLASS: {selected.classLabel}
-                </span>
-                <span
-                  className="flex items-center px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-wider border"
-                  style={{ color: selected.color, borderColor: selected.color + '44', backgroundColor: selected.color + '0a' }}
-                >
-                  ISLAND: {selected.label}
+                  {selected.classIcon} JENJANG: {selected.classLabel}
                 </span>
               </div>
 
@@ -207,30 +201,6 @@ const PilihJenjang = () => {
                 <span className="text-slate-900">{selected.classLabel}</span>{' '}
                 <span className="text-slate-300">PATH</span>
               </h2>
-
-              {/* Materi */}
-              <div className="mb-7">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
-                  Materi yang akan dipelajari
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {selected.materi.map((m, i) => (
-                    <span
-                      key={i}
-                      className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl"
-                      style={{ backgroundColor: selected.color + '12', color: selected.color }}
-                    >
-                      <span
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
-                        style={{ backgroundColor: selected.color }}
-                      >
-                        {i + 1}
-                      </span>
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
 
               {/* Difficulty stars */}
               <div className="mb-8">
@@ -273,7 +243,7 @@ const PilihJenjang = () => {
               </button>
 
               <p className="mt-3 text-[10px] text-slate-400 font-bold">
-                Hanya 3 soal · Tidak sampai 5 menit
+                10 soal pre-test akan diberikan untuk menilai kemampuan awalmu. Jangan khawatir, ini hanya untuk membantu kami menyesuaikan materi belajar yang tepat untukmu!
               </p>
             </div>
 

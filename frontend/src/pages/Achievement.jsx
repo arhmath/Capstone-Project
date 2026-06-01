@@ -183,7 +183,7 @@ const Achievement = () => {
               <div className={`flex items-center gap-1.5 mt-2 ${unlocked ? color.text : 'text-slate-400'}`}>
                 <Star size={13} fill="currentColor" />
                 <span className="text-xs font-black">+{ach.xpReward} XP</span>
-                {unlocked && <span className="text-xs font-medium opacity-70">· Sudah diklaim!</span>}
+                {unlocked && <span className="text-xs font-medium opacity-70">· Sudah didapat!</span>}
               </div>
             </div>
           );

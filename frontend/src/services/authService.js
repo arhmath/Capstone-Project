@@ -1,6 +1,5 @@
-const BASE_URL = 'https://math-quest.up.railway.app/api';
+const BASE_URL = 'http://localhost:5000/api';
 
-// Helper untuk header Authorization
 const authHeader = () => ({
   'Content-Type': 'application/json',
   Authorization: `Bearer ${localStorage.getItem('mq_token')}`,
@@ -14,7 +13,7 @@ export const registerUser = async ({ name, email, password }) => {
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);
-  return data.data; // { user, token }
+  return data.data;
 };
 
 export const loginUser = async ({ email, password }) => {
@@ -25,7 +24,7 @@ export const loginUser = async ({ email, password }) => {
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);
-  return data.data; // { user, token }
+  return data.data;
 };
 
 export const getMe = async () => {
@@ -42,10 +41,22 @@ export const logoutUser = async () => {
     method: 'POST',
     headers: authHeader(),
   });
-
   const data = await res.json();
-
   if (!data.success) throw new Error(data.message);
-
   return data.message;
+};
+
+export const updateProfileApi = async ({ name, avatarUrl }) => {
+  const body = {};
+  if (name)      body.name = name;
+  if (avatarUrl) body.avatarUrl = avatarUrl;
+
+  const res = await fetch(`${BASE_URL}/auth/profile`, {
+    method: 'PATCH',
+    headers: authHeader(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
 };

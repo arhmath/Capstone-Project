@@ -26,9 +26,9 @@ export const AppProvider = ({ children }) => {
   });
 
   const [achievements, setAchievements] = useState([
-    { id: 1, title: 'First Step',    icon: '🚀', desc: 'Selesaikan Pre-test pertama',        unlocked: true  },
-    { id: 2, title: 'Math Warrior',  icon: '⚔️', desc: 'Selesaikan 10 tantangan',             unlocked: false },
-    { id: 3, title: '7 Days Streak', icon: '🔥', desc: 'Belajar 7 hari berturut-turut',       unlocked: false },
+    { id: 1, title: 'First Step', icon: '🚀', desc: 'Selesaikan Pre-test pertama', unlocked: true },
+    { id: 2, title: 'Math Warrior', icon: '⚔️', desc: 'Selesaikan 10 tantangan', unlocked: false },
+    { id: 3, title: '7 Days Streak', icon: '🔥', desc: 'Belajar 7 hari berturut-turut', unlocked: false },
   ]);
 
   // Cegah refreshUser duplikat saat mount
@@ -66,18 +66,18 @@ export const AppProvider = ({ children }) => {
       beUser.userEducationLevels?.[0]?.educationLevel || null;
 
     return {
-      id:       beUser.id,
+      id: beUser.id,
       username: beUser.name,
-      email:    beUser.email,
+      email: beUser.email,
       foto:
         beUser.avatarUrl ||
         `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(beUser.name)}`,
-      xp:       beUser.userXp?.totalXp        ?? 0,
-      level:    beUser.userXp?.level          ?? 1,
-      xpToNext: beUser.userXp?.xpToNextLevel  ?? 100,
-      streak:   beUser.userStreak?.currentStreak ?? 0,
-      jenjang:  latestLevel,
-      rank:     beUser.leaderboardRank        ?? null,
+      xp: beUser.userXp?.totalXp ?? 0,
+      level: beUser.userXp?.level ?? 1,
+      xpToNext: beUser.userXp?.xpToNextLevel ?? 100,
+      streak: beUser.userStreak?.currentStreak ?? 0,
+      jenjang: latestLevel,
+      rank: beUser.leaderboardRank ?? null,
       totalAchievements: beUser.totalAchievements ?? 0,
     };
   };
@@ -135,8 +135,8 @@ export const AppProvider = ({ children }) => {
   const syncXpFromBE = (userXpFromBE) => {
     setUser((prev) => ({
       ...prev,
-      xp:       userXpFromBE.totalXp,
-      level:    userXpFromBE.level,
+      xp: userXpFromBE.totalXp,
+      level: userXpFromBE.level,
       xpToNext: userXpFromBE.xpToNextLevel,
     }));
   };
@@ -148,7 +148,7 @@ export const AppProvider = ({ children }) => {
   const addXP = (amount) => {
     setUser((prev) => {
       if (!prev) return null;
-      const newXP    = prev.xp + amount;
+      const newXP = prev.xp + amount;
       const newLevel = Math.floor(newXP / 1000) + 1;
       return { ...prev, xp: newXP, level: newLevel };
     });
@@ -167,7 +167,14 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // ── PROVIDER ──────────────────────────────────────────────────────────────
+  const updateUserStats = (userXp) => {
+    if (!userXp) return;
+    setUser(prev => ({
+      ...prev,
+      xp: userXp.totalXp,
+      level: userXp.level,
+    }));
+  };
 
   return (
     <AppContext.Provider
@@ -184,6 +191,8 @@ export const AppProvider = ({ children }) => {
         addXP,
         syncXpFromBE,
         refreshUser,
+        updateUserStats,
+        normalizeUser,
       }}
     >
       {children}

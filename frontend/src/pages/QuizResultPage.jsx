@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getQuizResult } from '../services/quizService';
 import {
   Trophy, Star, CheckCircle2, XCircle,
   Home, Loader2, Clock, Zap, Target,
   ChevronDown, ChevronUp, Brain,
 } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
+import useNotifications from '../hooks/useNotifications';
+import NotificationToast from '../components/NotificationToast';
 
 const COLORS = {
   green: '#58CC02',
@@ -18,7 +21,6 @@ const COLORS = {
   orange: '#FF9600',
 };
 
-// ─── Animated Counter ──────────────────────────────────────────────────────────
 const AnimatedNumber = ({ target, duration = 1200, suffix = '' }) => {
   const [value, setValue] = useState(0);
   const raf = useRef(null);
@@ -38,7 +40,6 @@ const AnimatedNumber = ({ target, duration = 1200, suffix = '' }) => {
   return <>{value}{suffix}</>;
 };
 
-// ─── Score Ring ────────────────────────────────────────────────────────────────
 const ScoreRing = ({ score, max, passed, delay = 0 }) => {
   const [animated, setAnimated] = useState(false);
   const pct = max > 0 ? score / max : 0;
@@ -76,7 +77,6 @@ const ScoreRing = ({ score, max, passed, delay = 0 }) => {
   );
 };
 
-// ─── Stat Card ─────────────────────────────────────────────────────────────────
 const StatCard = ({ icon, label, value, color, bg, delay }) => (
   <div
     className="bg-white rounded-[24px] p-5 border-2 border-slate-100 flex flex-col items-center gap-2 animate-stat-in"
@@ -90,7 +90,6 @@ const StatCard = ({ icon, label, value, color, bg, delay }) => (
   </div>
 );
 
-// ─── Answer Review Item ────────────────────────────────────────────────────────
 const AnswerItem = ({ answer, index }) => {
   const [expanded, setExpanded] = useState(false);
   const correct = answer.isCorrect;
@@ -149,11 +148,10 @@ const AnswerItem = ({ answer, index }) => {
               return (
                 <div
                   key={opt.id}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border ${
-                    isCorrect ? 'bg-green-100 border-green-200 text-green-800'
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border ${isCorrect ? 'bg-green-100 border-green-200 text-green-800'
                     : isSelected ? 'bg-red-100 border-red-200 text-red-700'
-                    : 'bg-white/70 border-transparent text-slate-500'
-                  }`}
+                      : 'bg-white/70 border-transparent text-slate-500'
+                    }`}
                 >
                   {isCorrect && <CheckCircle2 size={14} className="text-green-600 shrink-0" fill="currentColor" />}
                   {!isCorrect && isSelected && <XCircle size={14} className="text-red-500 shrink-0" fill="currentColor" />}
@@ -175,13 +173,16 @@ const AnswerItem = ({ answer, index }) => {
   );
 };
 
-// ─── Main QuizResultPage ───────────────────────────────────────────────────────
 const QuizResultPage = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
+  const { state: locationState } = useLocation();
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAnswers, setShowAnswers] = useState(false);
+
+  const { notifications, triggerNotifications, clearNotifications } = useNotifications();
+  const notifTriggeredRef = useRef(false);
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -196,6 +197,17 @@ const QuizResultPage = () => {
     };
     fetchResult();
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!loading && result && !notifTriggeredRef.current) {
+      const pending = locationState?.pendingNotifications ?? [];
+      if (pending.length > 0) {
+        notifTriggeredRef.current = true;
+        // Delay sedikit agar animasi hero card selesai dulu
+        setTimeout(() => triggerNotifications(pending), 800);
+      }
+    }
+  }, [loading, result]);
 
   if (loading || !result) {
     return (
@@ -375,6 +387,11 @@ const QuizResultPage = () => {
           </div>
         </div>
       </div>
+
+      <NotificationToast
+        notifications={notifications}
+        onDone={clearNotifications}
+      />
     </>
   );
 };

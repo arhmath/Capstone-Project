@@ -1,0 +1,39 @@
+enum EducationLevel {
+  primary
+  middle
+  high
+}
+
+enum AuthProvider {
+  email
+  google
+  school
+}
+
+enum PageType {
+  story
+  explanation
+  summary
+}
+
+enum SessionStatus {
+  in_progress
+  completed
+}
+
+enum XpSourceType {
+  quiz
+  module
+  streak_bonus
+  pretest
+  achievement
+}
+
+enum AchievementCategory {
+  onboarding
+  module
+  quiz
+  streak
+  xp
+  level
+}

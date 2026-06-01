@@ -13,6 +13,8 @@ import PreTest from './pages/Pretest';
 import ModuleReader from './pages/ModuleReader';
 import QuizPage from './pages/QuizPage';
 import QuizResultPage from './pages/QuizResultPage';
+import TermsAndConditions from './pages/TermsAndConditions';
+
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
 
           {/* Halaman yang diproteksi */}
           <Route

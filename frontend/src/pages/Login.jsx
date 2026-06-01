@@ -456,7 +456,7 @@ const Login = () => {
 
           <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textAlign: 'center', marginTop: 20, lineHeight: 1.6 }}>
             Dengan masuk, kamu setuju dengan{' '}
-            <span style={{ color: '#FF6B35', cursor: 'pointer' }}>Syarat & Ketentuan</span> MathQuest
+            <span onClick={() => navigate('/terms')} style={{ color: '#FF6B35', cursor: 'pointer' }}>Syarat & Ketentuan</span> MathQuest
           </p>
         </div>
       </div>

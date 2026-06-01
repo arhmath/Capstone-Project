@@ -1,0 +1,66 @@
+model PretestQuestion {
+  id           String   @id @default(uuid())
+  educationLevel      EducationLevel @map("education_level")
+  topic        String   @db.VarChar(100)
+  questionText String   @map("question_text")
+  imageUrl     String?  @map("image_url")
+  difficulty   String   @default("medium") @db.VarChar(20)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  options PretestQuestionOption[]
+  answers PretestAnswer[]
+
+  @@index([educationLevel])
+  @@index([educationLevel, topic])
+  @@map("pretest_questions")
+}
+
+model PretestQuestionOption {
+  id          String  @id @default(uuid())
+  questionId  String  @map("question_id")
+  optionText  String  @map("option_text")
+  isCorrect   Boolean @default(false) @map("is_correct")
+  explanation String?
+
+  question       PretestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  pretestAnswers PretestAnswer[]
+
+  @@index([questionId])
+  @@map("pretest_question_options")
+}
+
+model PretestSession {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  educationLevel         EducationLevel @map("education_level")
+  totalScore      Int           @default(0) @map("total_score")
+  durationSeconds Int?          @map("duration_seconds")
+  topicScores     Json?         @map("topic_scores")
+  status          SessionStatus @default(in_progress)
+  completedAt     DateTime?     @map("completed_at")
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers          PretestAnswer[]
+  aiRecommendation AiRecommendation?
+
+  @@index([userId])
+  @@index([userId, educationLevel])
+  @@map("pretest_sessions")
+}
+
+model PretestAnswer {
+  id               String  @id @default(uuid())
+  sessionId        String  @map("session_id")
+  questionId       String  @map("question_id")
+  selectedOptionId String? @map("selected_option_id")
+  isCorrect        Boolean @default(false) @map("is_correct")
+  timeTakenSeconds Int?    @map("time_taken_seconds")
+
+  session        PretestSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question       PretestQuestion        @relation(fields: [questionId], references: [id])
+  selectedOption PretestQuestionOption? @relation(fields: [selectedOptionId], references: [id])
+
+  @@index([sessionId])
+  @@map("pretest_answers")
+}

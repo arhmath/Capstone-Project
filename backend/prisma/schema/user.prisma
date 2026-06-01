@@ -1,0 +1,34 @@
+model User {
+  id           String       @id @default(uuid())
+  name         String       @db.VarChar(100)
+  email        String       @unique @db.VarChar(255)
+  passwordHash String?      @map("password_hash")
+  avatarUrl    String?      @map("avatar_url")
+  authProvider AuthProvider @default(email) @map("auth_provider")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  lastLoginAt  DateTime?    @map("last_login_at")
+
+  userEducationLevels        UserEducationLevel[]
+  pretestSessions   PretestSession[]
+  aiRecommendations AiRecommendation[]
+  moduleProgresses  UserModuleProgress[]
+  quizSessions      QuizSession[]
+  userXp            UserXp?
+  xpTransactions    XpTransaction[]
+  userStreak        UserStreak?
+  userAchievements UserAchievement[]
+
+  @@map("users")
+}
+
+model UserEducationLevel {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  educationLevel    EducationLevel @map("education_level")
+  selectedAt DateTime @default(now()) @map("selected_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_education_levels")
+}

@@ -1,0 +1,54 @@
+model Module {
+  id          String   @id @default(uuid())
+  title       String   @db.VarChar(200)
+  educationLevel     EducationLevel @map("education_level")
+  topic       String   @db.VarChar(100)
+  description String?
+  orderIndex  Int      @default(0) @map("order_index")
+  xpReward    Int      @default(50) @map("xp_reward")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  aiRecommendation AiRecommendation[]
+  pages      ModulePage[]
+  quizzes    Quiz[]
+  progresses UserModuleProgress[]
+
+  @@index([educationLevel])
+  @@index([educationLevel, topic, orderIndex])
+  @@map("modules")
+}
+
+model ModulePage {
+  id              String   @id @default(uuid())
+  moduleId        String   @map("module_id")
+  pageNumber      Int      @map("page_number")
+  sceneTitle      String?  @map("scene_title") @db.VarChar(200)
+  storyContent    String   @map("story_content")
+  illustrationUrl String?  @map("illustration_url")
+  pageType        PageType @default(story) @map("page_type")
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, pageNumber])
+  @@index([moduleId])
+  @@map("module_pages")
+}
+
+model UserModuleProgress {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  moduleId    String    @map("module_id")
+  lastPage    Int       @default(1) @map("last_page")
+  isCompleted Boolean   @default(false) @map("is_completed")
+  xpEarned    Int       @default(0) @map("xp_earned")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id])
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@map("user_module_progress")
+}

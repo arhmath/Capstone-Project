@@ -1,0 +1,86 @@
+model Quiz {
+  id               String   @id @default(uuid())
+  moduleId         String   @map("module_id")
+  title            String   @db.VarChar(200)
+  timeLimitSeconds Int      @default(30) @map("time_limit_seconds")
+  passingScore     Int      @default(70) @map("passing_score")
+  maxXp            Int      @default(100) @map("max_xp")
+  isPublished      Boolean  @default(false) @map("is_published")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  module    Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questions Question[]
+  sessions  QuizSession[]
+
+  @@index([moduleId])
+  @@map("quizzes")
+}
+
+model Question {
+  id               String  @id @default(uuid())
+  quizId           String  @map("quiz_id")
+  questionText     String  @map("question_text")
+  imageUrl         String? @map("image_url")
+  timeLimitSeconds Int     @default(30) @map("time_limit_seconds")
+  baseXp           Int     @default(10) @map("base_xp")
+  orderIndex       Int     @default(0) @map("order_index")
+
+  quiz    Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuestionOption[]
+  answers QuizAnswer[]
+
+  @@index([quizId])
+  @@index([quizId, orderIndex])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id          String  @id @default(uuid())
+  questionId  String  @map("question_id")
+  optionText  String  @map("option_text")
+  isCorrect   Boolean @default(false) @map("is_correct")
+  explanation String?
+
+  question    Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  quizAnswers QuizAnswer[]
+
+  @@index([questionId])
+  @@map("question_options")
+}
+
+model QuizSession {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  quizId          String        @map("quiz_id")
+  totalScore      Int           @default(0) @map("total_score")
+  totalXpEarned   Int           @default(0) @map("total_xp_earned")
+  durationSeconds Int?          @map("duration_seconds")
+  status          SessionStatus @default(in_progress)
+  startedAt       DateTime      @default(now()) @map("started_at")
+  completedAt     DateTime?     @map("completed_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz    Quiz        @relation(fields: [quizId], references: [id])
+  answers QuizAnswer[]
+
+  @@index([userId])
+  @@index([userId, quizId])
+  @@map("quiz_sessions")
+}
+
+model QuizAnswer {
+  id               String  @id @default(uuid())
+  sessionId        String  @map("session_id")
+  questionId       String  @map("question_id")
+  selectedOptionId String? @map("selected_option_id")
+  isCorrect        Boolean @default(false) @map("is_correct")
+  timeTakenSeconds Int     @default(0) @map("time_taken_seconds")
+  xpEarned         Int     @default(0) @map("xp_earned")
+
+  session        QuizSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question       Question        @relation(fields: [questionId], references: [id])
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id])
+
+  @@index([sessionId])
+  @@map("quiz_answers")
+}

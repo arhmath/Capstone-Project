@@ -1,0 +1,126 @@
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
+async function main() {
+    console.log('Seeding...');
+
+    const moduleData = {
+        title: 'Bilangan Cacah Sampai 1000',
+        educationLevel: 'primary',
+
+        // HARUS SAMA DENGAN PRETEST QUESTION
+        topic: 'bilangan_cacah_sampai_1000',
+
+        description:
+            'Mempelajari bilangan cacah sampai 1000, nilai tempat, dan perbandingan bilangan.',
+        orderIndex: 5,
+        xpReward: 60,
+        isPublished: true,
+
+        pages: [
+            {
+                pageNumber: 1,
+                sceneTitle: 'Gudang Buku Sekolah',
+                storyContent:
+                    'Pak Budi sedang menghitung jumlah buku di gudang sekolah...',
+                pageType: 'story',
+            },
+
+            // dst...
+        ],
+    };
+
+    const quizData = {
+        title: 'Bilangan Cacah Sampai 1000 Quiz',
+        timeLimitSeconds: 300,
+        passingScore: 70,
+        maxXp: 100,
+        isPublished: true,
+
+        questions: [
+            {
+                questionText:
+                    "Lambang bilangan dari 'tiga ratus lima belas' adalah...",
+                imageUrl: null,
+                timeLimitSeconds: 30,
+                baseXp: 10,
+                orderIndex: 1,
+
+                options: [
+                    {
+                        optionText: '305',
+                        isCorrect: false,
+                        explanation: '',
+                    },
+                    {
+                        optionText: '315',
+                        isCorrect: true,
+                        explanation: '',
+                    },
+                    {
+                        optionText: '351',
+                        isCorrect: false,
+                        explanation: '',
+                    },
+                    {
+                        optionText: '350',
+                        isCorrect: false,
+                        explanation: '',
+                    },
+                ],
+            },
+
+            // dst...
+        ],
+    };
+
+    const module = await prisma.module.create({
+        data: {
+            title: moduleData.title,
+            educationLevel: moduleData.educationLevel,
+            topic: moduleData.topic,
+            description: moduleData.description,
+            orderIndex: moduleData.orderIndex,
+            xpReward: moduleData.xpReward,
+            isPublished: moduleData.isPublished,
+
+            pages: {
+                create: moduleData.pages,
+            },
+        },
+    });
+
+    await prisma.quiz.create({
+        data: {
+            moduleId: module.id,
+            title: quizData.title,
+            timeLimitSeconds: quizData.timeLimitSeconds,
+            passingScore: quizData.passingScore,
+            maxXp: quizData.maxXp,
+            isPublished: quizData.isPublished,
+
+            questions: {
+                create: quizData.questions.map((question) => ({
+                    questionText: question.questionText,
+                    imageUrl: question.imageUrl,
+                    timeLimitSeconds: question.timeLimitSeconds,
+                    baseXp: question.baseXp,
+                    orderIndex: question.orderIndex,
+
+                    options: {
+                        create: question.options,
+                    },
+                })),
+            },
+        },
+    });
+
+    console.log(`Module '${moduleData.title}' with quiz '${quizData.title}' seeded successfully`);
+}
+
+main()
+    .catch(console.error)
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

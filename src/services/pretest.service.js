@@ -24,10 +24,8 @@ const createSession = async (userId, educationLevel) => {
 
 // 2. Get questions untuk sesi pretest yang sedang berjalan
 const getSessionQuestions = async (sessionId, userId) => {
-
   const TOTAL_QUESTIONS = 10;
 
-  // VALIDASI SESSION
   const session = await prisma.pretestSession.findUnique({
     where: { id: sessionId },
     select: {
@@ -56,15 +54,14 @@ const getSessionQuestions = async (sessionId, userId) => {
     throw err;
   }
 
-  // AMBIL MODULE BERDASARKAN EDUCATION LEVEL
   const modules = await prisma.module.findMany({
     where: {
       educationLevel: session.educationLevel,
       isPublished: true,
+      orderIndex: { in: [1, 2, 3] },
     },
     select: {
       id: true,
-      title: true,
       topic: true,
     },
     orderBy: {
@@ -73,68 +70,71 @@ const getSessionQuestions = async (sessionId, userId) => {
   });
 
   if (modules.length === 0) {
-    const err = new Error('Module tidak ditemukan');
+    const err = new Error('Module dengan tingkatan ini tidak ditemukan');
     err.status = 404;
     throw err;
   }
 
-  // HITUNG DISTRIBUSI SOAL
-  const questionPerModule = Math.floor(
-    TOTAL_QUESTIONS / modules.length
-  );
+  const targetTopics = modules.map((m) => m.topic);
 
-  const remainder = TOTAL_QUESTIONS % modules.length;
-
-  let finalQuestions = [];
-
-  // LOOP MODULE
-  for (let i = 0; i < modules.length; i++) {
-
-    const module = modules[i];
-
-    const takeCount =
-      i < remainder
-        ? questionPerModule + 1
-        : questionPerModule;
-
-    const questions = await prisma.pretestQuestion.findMany({
-      where: {
-        educationLevel: session.educationLevel,
-        topic: module.topic,
-        isActive: true,
-      },
-
-      select: {
-        id: true,
-        topic: true,
-        questionText: true,
-        imageUrl: true,
-        difficulty: true,
-
-        options: {
-          select: {
-            id: true,
-            optionText: true,
-          },
+  const allQuestions = await prisma.pretestQuestion.findMany({
+    where: {
+      educationLevel: session.educationLevel,
+      topic: { in: targetTopics }, 
+      isActive: true,
+    },
+    select: {
+      id: true,
+      topic: true,
+      questionText: true,
+      imageUrl: true,
+      difficulty: true,
+      options: {
+        select: {
+          id: true,
+          optionText: true,
         },
       },
-    });
+    },
+  });
 
-    // RANDOM
-    const shuffled = questions.sort(
-      () => Math.random() - 0.5
-    );
-
-    // AMBIL SESUAI JATAH
-    finalQuestions.push(
-      ...shuffled.slice(0, takeCount)
-    );
+  if (allQuestions.length < TOTAL_QUESTIONS) {
+    const err = new Error('Total stok soal di database kurang dari 10');
+    err.status = 400;
+    throw err;
   }
 
-  // SHUFFLE FINAL
-  finalQuestions = finalQuestions.sort(
-    () => Math.random() - 0.5
-  );
+  const questionsByTopic = {};
+  targetTopics.forEach((topic) => {
+    questionsByTopic[topic] = allQuestions
+      .filter((q) => q.topic === topic)
+      .sort(() => Math.random() - 0.5);
+  });
+
+  const questionPerModule = Math.floor(TOTAL_QUESTIONS / modules.length);
+  const remainder = TOTAL_QUESTIONS % modules.length;
+
+  const finalQuestions = [];
+  const poolSisaSoal = [];
+
+  modules.forEach((module, index) => {
+    const takeCount = index < remainder ? questionPerModule + 1 : questionPerModule;
+    const availableQuestions = questionsByTopic[module.topic] || [];
+
+    const primaryTake = availableQuestions.slice(0, takeCount);
+    finalQuestions.push(...primaryTake);
+
+    const backupQuestions = availableQuestions.slice(takeCount);
+    poolSisaSoal.push(...backupQuestions);
+  });
+
+  if (finalQuestions.length < TOTAL_QUESTIONS) {
+    const shortFall = TOTAL_QUESTIONS - finalQuestions.length;
+    const shuffledBackup = poolSisaSoal.sort(() => Math.random() - 0.5);
+    finalQuestions.push(...shuffledBackup.slice(0, shortFall));
+  }
+
+  const finalShuffledQuestions = finalQuestions.sort(() => Math.random() - 0.5);
 
   return {
     session: {
@@ -142,10 +142,8 @@ const getSessionQuestions = async (sessionId, userId) => {
       educationLevel: session.educationLevel,
       status: session.status,
     },
-
-    total: finalQuestions.length,
-
-    questions: finalQuestions,
+    total: finalShuffledQuestions.length,
+    questions: finalShuffledQuestions,
   };
 };
 

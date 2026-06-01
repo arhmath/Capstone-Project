@@ -266,6 +266,14 @@ const updateProgress = async (moduleId, userId, lastPage) => {
         where: { userId_moduleId: { userId, moduleId } },
     });
 
+    if (existingProgress && pageNum <= existingProgress.lastPage) {
+        return {
+            ...existingProgress,
+            totalPages,
+            notifications: [],
+        };
+    }
+
     const justCompleted = !existingProgress?.isCompleted && pageNum === totalPages;
     const isCompleted = existingProgress?.isCompleted || pageNum === totalPages;
 

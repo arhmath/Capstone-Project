@@ -172,7 +172,7 @@ const ModuleReader = () => {
       try {
         const res = await getModuleById(moduleId);
         setModule(res);
-        setCurrentPage(res.progress?.lastPage + 1 || 1);
+        setCurrentPage(res.progress?.lastPage || 1);
       } catch (err) { console.error(err); }
     };
     fetchModule();

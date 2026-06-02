@@ -583,21 +583,39 @@ const PreTest = () => {
           </div>
         </div>
 
-        {/* Feedback + tombol lanjut */}
         {picked && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className={`flex items-start gap-4 px-5 py-4 rounded-2xl border mb-4 ${pickedCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-              <span className="text-2xl flex-shrink-0">{pickedCorrect ? '🎉' : '💡'}</span>
+            <div className={`flex items-start gap-4 px-5 py-4 rounded-2xl border mb-4 ${submitting
+                ? 'bg-blue-50 border-blue-200'
+                : pickedCorrect
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+              <span className="text-2xl flex-shrink-0">
+                {submitting ? '⏳' : pickedCorrect ? '🎉' : '💡'}
+              </span>
               <div>
-                <p className={`font-black text-sm mb-0.5 ${pickedCorrect ? 'text-green-700' : 'text-red-600'}`}>
-                  {pickedCorrect ? 'Jawaban Benar!' : 'Kurang tepat...'}
+                <p className={`font-black text-sm mb-0.5 ${submitting
+                    ? 'text-blue-600'
+                    : pickedCorrect
+                      ? 'text-green-700'
+                      : 'text-red-600'
+                  }`}>
+                  {submitting
+                    ? 'Memvalidasi Jawaban...'
+                    : pickedCorrect
+                      ? 'Jawaban Benar!'
+                      : 'Kurang tepat...'
+                  }
                 </p>
                 <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                  {pickedCorrect
-                    ? `Kamu menguasai topik ${formatTopic(q.topic) ?? 'ini'} dengan baik!`
-                    : lastAnswer?.correctOptionText
-                      ? `Jawaban yang benar adalah "${lastAnswer.correctOptionText}". Pelajari lagi yuk!`
-                      : 'Pelajari lagi materi ini yuk!'
+                  {submitting
+                    ? 'Mohon tunggu sebentar, sistem sedang memeriksa jawabanmu.'
+                    : pickedCorrect
+                      ? `Kamu menguasai topik ${formatTopic(q.topic) ?? 'ini'} dengan baik!`
+                      : lastAnswer?.correctOptionText
+                        ? `Jawaban yang benar adalah "${lastAnswer.correctOptionText}". Pelajari lagi yuk!`
+                        : 'Pelajari lagi materi ini yuk!'
                   }
                 </p>
               </div>

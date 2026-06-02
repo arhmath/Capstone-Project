@@ -27,20 +27,20 @@ const Dashboard = () => {
   };
 
   const navLinks = [
-    { name: 'Quest Map',   path: '/dashboard/quest-map',   icon: <MapIcon size={20} /> },
+    { name: 'Quest Map', path: '/dashboard/quest-map', icon: <MapIcon size={20} /> },
     { name: 'Leaderboard', path: '/dashboard/leaderboard', icon: <Trophy size={20} /> },
     { name: 'Achievement', path: '/dashboard/achievement', icon: <Award size={20} /> },
-    { name: 'Profil',      path: '/dashboard/profile',     icon: <User size={20} /> },
+    { name: 'Profil', path: '/dashboard/profile', icon: <User size={20} /> },
   ];
 
   const pageDescriptions = {
-    '/dashboard/quest-map':   'Jelajahi modul belajar dan selesaikan tantangan quiz',
+    '/dashboard/quest-map': 'Jelajahi modul belajar dan selesaikan tantangan quiz',
     '/dashboard/leaderboard': 'Lihat peringkat dan bandingkan skormu dengan petualang lain',
     '/dashboard/achievement': 'Koleksi lencana dan pencapaian yang telah kamu raih',
-    '/dashboard/profile':     'Kelola informasi akun dan pantau perkembanganmu',
+    '/dashboard/profile': 'Kelola informasi akun dan pantau perkembanganmu',
   };
 
-  const currentDesc     = pageDescriptions[location.pathname] ?? 'Selamat datang di MathQuest!';
+  const currentDesc = pageDescriptions[location.pathname] ?? 'Selamat datang di MathQuest!';
   const currentPageName = navLinks.find(l => l.path === location.pathname)?.name ?? 'Dashboard';
 
   const xpPercent = Math.min(((user?.xp || 0) % 100) / 100 * 100, 100);
@@ -64,7 +64,7 @@ const Dashboard = () => {
             <div className="min-w-0">
               <p className="font-black text-slate-800 text-sm leading-tight truncate">{user?.username || 'Petualang'}</p>
               <p className="text-[10px] font-bold text-mq-primary uppercase tracking-wider">
-                Lv.{user?.level || 1} · {{ primary:'SD', middle:'SMP', high:'SMA' }[user?.jenjang] || 'SD'}
+                Lv.{user?.level || 1} · {{ primary: 'SD', middle: 'SMP', high: 'SMA' }[user?.jenjang] || 'SD'}
               </p>
             </div>
           </div>
@@ -79,17 +79,16 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 mt-2">
+        <nav className="flex-1 px-4 mt-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-4">Menu Utama</p>
           <div className="space-y-2">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
                 <Link key={link.path} to={link.path}
-                  className={`flex items-center gap-4 px-4 py-4 rounded-2xl font-bold transition-all duration-300 ${
-                    isActive ? 'bg-mq-primary text-white shadow-xl shadow-blue-200 translate-x-2'
-                             : 'text-slate-500 hover:bg-mq-peach/30 hover:text-mq-primary'
-                  }`}
+                  className={`flex items-center gap-4 px-4 py-4 rounded-2xl font-bold transition-all duration-300 ${isActive ? 'bg-mq-primary text-white shadow-xl shadow-blue-200 translate-x-2'
+                      : 'text-slate-500 hover:bg-mq-peach/30 hover:text-mq-primary'
+                    }`}
                 >
                   {link.icon}{link.name}
                 </Link>
@@ -98,7 +97,7 @@ const Dashboard = () => {
           </div>
         </nav>
 
-        <div className="p-6 border-t border-slate-50">
+        <div className="p-6 border-t border-slate-50 shrink-0">
           <button onClick={handleLogout}
             className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl font-bold text-mq-orange hover:bg-orange-50 transition-all"
           >
@@ -122,7 +121,7 @@ const Dashboard = () => {
 
             <div className="flex items-center gap-2 lg:gap-3">
               <div className="hidden lg:flex items-center gap-1.5 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-                <Flame size={16} fill="#FF4B4B" style={{ color:'#FF4B4B' }} />
+                <Flame size={16} fill="#FF4B4B" style={{ color: '#FF4B4B' }} />
                 <span className="font-black text-slate-700 text-sm">{user?.streak ?? 0} Hari</span>
               </div>
               <div className="hidden lg:flex items-center gap-1.5 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
@@ -131,7 +130,7 @@ const Dashboard = () => {
               </div>
 
               <div className="flex lg:hidden items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
-                <Flame size={14} fill="#FF4B4B" style={{ color:'#FF4B4B' }} />
+                <Flame size={14} fill="#FF4B4B" style={{ color: '#FF4B4B' }} />
                 <span className="font-black text-slate-700 text-xs">{user?.streak ?? 0}</span>
               </div>
 
@@ -165,11 +164,11 @@ const Dashboard = () => {
 
         <main className="p-4 lg:p-10 lg:pt-8 pb-24 lg:pb-10">
           <Routes>
-            <Route path="/"           element={<Navigate to="quest-map" replace />} />
-            <Route path="quest-map"   element={<QuestMap />} />
+            <Route path="/" element={<Navigate to="quest-map" replace />} />
+            <Route path="quest-map" element={<QuestMap />} />
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="achievement" element={<Achievement />} />
-            <Route path="profile"     element={<Profile onLogout={handleLogout} />} />
+            <Route path="profile" element={<Profile onLogout={handleLogout} />} />
           </Routes>
         </main>
       </div>
@@ -180,9 +179,8 @@ const Dashboard = () => {
             const isActive = location.pathname === link.path;
             return (
               <Link key={link.path} to={link.path}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
-                  isActive ? 'text-mq-primary' : 'text-slate-400'
-                }`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${isActive ? 'text-mq-primary' : 'text-slate-400'
+                  }`}
               >
                 <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-mq-primary/10' : ''}`}>
                   {link.icon}

@@ -19,9 +19,6 @@ export const getMe = async () => {
     method: 'GET',
     headers: authHeader(),
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.message);
-  return data.data;
 };
 
 export const logoutUser = async () => {
@@ -29,14 +26,12 @@ export const logoutUser = async () => {
     method: 'POST',
     headers: authHeader(),
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.message);
-  return data.message;
 };
 
 export const updateProfileApi = async ({ name, avatarUrl }) => {
   const body = {};
-  if (name)      body.name = name;
+
+  if (name) body.name = name;
   if (avatarUrl) body.avatarUrl = avatarUrl;
 
   return apiFetch('/auth/profile', {
@@ -44,6 +39,4 @@ export const updateProfileApi = async ({ name, avatarUrl }) => {
     headers: authHeader(),
     body: JSON.stringify(body),
   });
-  if (!data.success) throw new Error(data.message);
-  return data.data;
 };

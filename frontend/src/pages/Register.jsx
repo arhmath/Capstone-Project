@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import { registerUser } from '../services/authService';
 
-import TrophyIcon from '../assets/trophy.png'; 
+import TrophyIcon from '../assets/trophy.png';
 import CompassIcon from '../assets/compass.png';
 
 const Register = () => {
@@ -38,7 +38,11 @@ const Register = () => {
       });
       navigate('/login');
     } catch (err) {
-      setError(err.message);
+      if (err.errors && err.errors.length > 0) {
+        setError(err.errors[0].message);
+      } else {
+        setError(err.message || 'Terjadi kesalahan saat mendaftar');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -411,17 +415,17 @@ const Register = () => {
           </h2>
 
           <p style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: 14, maxWidth: 300, margin: '0 0 32px' }}>
-          Ubah rumus menjadi petualangan, kumpulkan pencapaian hebat, dan buktikan bahwa kamulah master matematika sejati!
+            Ubah rumus menjadi petualangan, kumpulkan pencapaian hebat, dan buktikan bahwa kamulah master matematika sejati!
           </p>
 
           {/* Feature cards */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
             {features.map((f, i) => (
-              <div key={i} className="feature-card" style ={{ display: 'flex', flexDirection: 'column', alignItems: 'center',justifyContent: 'center', textAlign: 'center' }}>
-                <img 
-                  src={f.icon} 
-                  alt={f.title} 
-                  style={{ width: 44, height: 44, objectFit: 'contain', marginBottom: 10 }} 
+              <div key={i} className="feature-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                <img
+                  src={f.icon}
+                  alt={f.title}
+                  style={{ width: 44, height: 44, objectFit: 'contain', marginBottom: 10 }}
                 />
                 <p style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 13, color: '#1E3A5F', margin: '0 0 4px' }}>
                   {f.title}

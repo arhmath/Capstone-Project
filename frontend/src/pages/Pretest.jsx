@@ -128,6 +128,7 @@ const ErrorScreen = ({ message, onRetry }) => (
 
 // ─── Result Screen ────────────────────────────────────────────────────────────
 
+
 const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) => {
   const navigate = useNavigate();
   const meta = JENJANG_META[jenjang];
@@ -139,14 +140,11 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
 
   const { refreshUser } = useApp();
 
-  // Backend fields: totalCorrect, totalAnswers
   const total = result.totalAnswers ?? questions.length;
   const correctCount = result.totalCorrect ?? 0;
   const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
   const rec = getRecommendation(pct);
 
-  // finishPretestSession tidak mengembalikan breakdown per soal,
-  // gunakan localAnswers yang dibangun selama sesi dari submitPretestAnswer
   const answerMap = Object.fromEntries(
     (localAnswers ?? []).map(a => [a.questionId, a])
   );
@@ -157,10 +155,6 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
       setRecommendationError(null);
 
       const raw = await getOrRequestRecommendation(sessionId);
-
-      // handle dua bentuk response:
-      // POST -> { user_id, session_id, recommendations }
-      // GET  -> { total, recommendations }
 
       const recs = raw?.recommendations ?? [];
 
@@ -227,7 +221,6 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
                 {questions.map((q) => {
                   const ans = answerMap[q.id];
                   const ok = ans?.correct ?? false;
-                  // localAnswers menyimpan correctOptionText dari res.correctOption.optionText
                   const correctText = ans?.correctOptionText;
                   return (
                     <div key={q.id} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${ok ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
@@ -254,7 +247,7 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
               </div>
             </div>
 
-            {/* Rekomendasi */}
+            {/* Rekomendasi Kasar */}
             <div className="bg-[#FFE1D7]/40 border border-[#FFE1D7] rounded-2xl p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{rec.icon}</span>
               <p className="text-sm text-slate-700 font-semibold leading-relaxed italic">"{rec.text}"</p>
@@ -282,7 +275,6 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
                 </CTAButton>
               )}
 
-              {/* Error */}
               {recommendationError && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                   <p className="text-sm font-bold text-red-600">
@@ -291,10 +283,8 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
                 </div>
               )}
 
-              {/* Recommendation List */}
-              {recommendations.length > 0 && (
+              {hasRequestedRecommendation && (
                 <div className="space-y-3">
-
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🤖</span>
                     <h3 className="font-black text-slate-800 uppercase tracking-wide">
@@ -302,64 +292,74 @@ const ResultScreen = ({ jenjang, result, questions, localAnswers, sessionId }) =
                     </h3>
                   </div>
 
-                  {recommendations.map((rec, idx) => {
-                    const moduleData = rec.module;
+                  {pct === 100 && recommendations.length === 0 ? (
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center space-y-2">
+                      <p className="text-3xl">🔥 🏆 🔥</p>
+                      <h4 className="text-base font-black text-green-800 uppercase tracking-tight">
+                        Sempurna! Tidak Ada Modul Dasar yang Perlu Diulang
+                      </h4>
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                        Analisis AI mendeteksi bahwa kamu sudah memahami seluruh materi uji coba dengan skor maksimal. Kamu bisa langsung menjelajahi peta petualangan utama atau mengambil tantangan tingkat lanjut di Dashboard!
+                      </p>
+                    </div>
+                  ) : recommendations.length > 0 ? (
+                    recommendations.map((rec, idx) => {
+                      const moduleData = rec.module;
+                      if (!moduleData) return null;
+                      const confidence = Math.round((rec.confidence ?? 0) * 100);
 
-                    if (!moduleData) return null;
-
-                    const confidence =
-                      Math.round((rec.confidence ?? 0) * 100);
-
-                    return (
-                      <div
-                        key={moduleData.id}
-                        className="bg-slate-50 border border-slate-100 rounded-2xl p-5"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span
-                                className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full"
-                                style={{
-                                  background: `${meta.color}15`,
-                                  color: meta.color,
-                                }}
-                              >
-                                #{idx + 1} Recommended
-                              </span>
-
-                              <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-green-100 text-green-700">
-                                {confidence}% Match
-                              </span>
-                            </div>
-
-                            <h4 className="text-lg font-black text-slate-800 leading-snug">
-                              {moduleData.title}
-                            </h4>
-
-                            <div className="flex flex-wrap items-center gap-2 mt-3">
-
-                              {moduleData.topic && (
-                                <span className="text-xs font-black px-3 py-1 rounded-xl bg-slate-100 text-slate-600">
-                                  📘 {formatTopic(moduleData.topic)}
+                      return (
+                        <div
+                          key={moduleData.id}
+                          className="bg-slate-50 border border-slate-100 rounded-2xl p-5"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span
+                                  className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full"
+                                  style={{
+                                    background: `${meta.color}15`,
+                                    color: meta.color,
+                                  }}
+                                >
+                                  #{idx + 1} Recommended
                                 </span>
-                              )}
+                                <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-green-100 text-green-700">
+                                  {confidence}% Match
+                                </span>
+                              </div>
 
-                              <span className="text-xs font-black px-3 py-1 rounded-xl bg-[#FFE1D7] text-[#FF6648]">
-                                ⭐ {moduleData.xpReward} XP
-                              </span>
+                              <h4 className="text-lg font-black text-slate-800 leading-snug">
+                                {moduleData.title}
+                              </h4>
 
-                              <span className="text-xs font-black px-3 py-1 rounded-xl bg-[#84AFFB]/20 text-[#0259DD]">
-                                Level {moduleData.orderIndex}
-                              </span>
+                              <div className="flex flex-wrap items-center gap-2 mt-3">
+                                {moduleData.topic && (
+                                  <span className="text-xs font-black px-3 py-1 rounded-xl bg-slate-100 text-slate-600">
+                                    📘 {formatTopic(moduleData.topic)}
+                                  </span>
+                                )}
+                                <span className="text-xs font-black px-3 py-1 rounded-xl bg-[#FFE1D7] text-[#FF6648]">
+                                  ⭐ {moduleData.xpReward} XP
+                                </span>
+                                <span className="text-xs font-black px-3 py-1 rounded-xl bg-[#84AFFB]/20 text-[#0259DD]">
+                                  Level {moduleData.orderIndex}
+                                </span>
+                              </div>
                             </div>
                           </div>
-
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    // Fallback jika skor bukan 100 tapi datanya kosong juga
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center">
+                      <p className="text-xs text-slate-500 font-bold">
+                        Belum ada modul spesifik yang direkomendasikan saat ini.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
